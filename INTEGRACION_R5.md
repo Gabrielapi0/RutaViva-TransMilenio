@@ -4,7 +4,12 @@
 Integrante 3 — Planeación de viajes y conversión GTFS.
 
 ## Estado actual
-El algoritmo R5 está implementado en Motor/viajes.py.
+El algoritmo R5 está implementado en motor/viajes.py.
+
+El algoritmo ha sido probado con una red independiente
+de los datos de TransMilenio, incluyendo recorridos directos,
+transbordos, estaciones cerradas, modificaciones de rutas,
+optimización de recorridos y estaciones repetidas.
 
 Se han ejecutado correctamente cinco pruebas con una red
 independiente de los datos de TransMilenio.
