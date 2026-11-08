@@ -16,7 +16,7 @@ RAIZ = Path(__file__).resolve().parent.parent
 # Permitimos importar el módulo Motor desde esa carpeta.
 sys.path.insert(0, str(RAIZ))
 # Importamos el planeador y la nueva función que entrega las paradas del recorrido.
-from Motor.viajes import IndiceViajes, cargar_estaciones, cargar_rutas, buscar_mejor_viaje, detalle_recorrido
+from motor.viajes import IndiceViajes, cargar_estaciones, cargar_rutas, buscar_mejor_viaje, detalle_recorrido
 # Importamos la descarga y el cruce de capas geográficas, exclusivamente desde Front.
 from Front.geografia import cargar_capas, preparar_estaciones, normalizar
 

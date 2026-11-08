@@ -11,7 +11,7 @@ raiz = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(raiz))
 
 # Importamos las funciones que ya desarrollamos.
-from Motor.viajes import (
+from motor.viajes import (
     cargar_estaciones,
     cargar_rutas,
     buscar_mejor_viaje,

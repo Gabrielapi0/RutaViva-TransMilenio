@@ -7,7 +7,7 @@ from pathlib import Path
 raiz = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(raiz))
 
-from Motor.viajes import (
+from motor.viajes import (
     cargar_estaciones,
     cargar_rutas,
     IndiceViajes,

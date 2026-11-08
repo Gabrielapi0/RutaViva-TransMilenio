@@ -4,7 +4,7 @@ from pathlib import Path
 raiz = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(raiz))
 
-from Motor.viajes import IndiceViajes, buscar_mejor_viaje
+from motor.viajes import IndiceViajes, buscar_mejor_viaje
 
 estaciones = [
     "ALFA", "BETA", "GAMMA",
