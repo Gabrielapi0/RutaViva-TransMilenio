@@ -101,3 +101,66 @@ El sistema no calcula tiempos reales de espera ni garantiza la operación actual
 ## Uso académico
 
 Proyecto desarrollado con fines educativos para aplicar conceptos de estructuras de datos, algoritmos de búsqueda, ordenamiento y procesamiento de información.
+
+---
+
+## Conversión de datos GTFS
+
+RutaViva incluye un conversor desarrollado en Python que transforma
+datos GTFS en los tres CSV utilizados por el motor:
+
+- estaciones.csv
+- rutas.csv
+- horarios.csv
+
+### Requisitos
+
+- Python instalado.
+- Archivo GTFS válido en formato ZIP o carpeta.
+- Espacio suficiente para generar los archivos convertidos.
+
+### Ejecutar el conversor
+
+Desde la carpeta principal del proyecto:
+
+python Conversion/convertir.py --entrada "ruta/al/archivo_gtfs.zip" --salida "Datos_corregidos"
+
+Sustituir "ruta/al/archivo_gtfs.zip" por la ubicación real del GTFS.
+
+### Archivos generados
+
+El programa genera:
+
+Datos_corregidos/estaciones.csv
+Datos_corregidos/rutas.csv
+Datos_corregidos/horarios.csv
+
+### Tratamiento de horarios
+
+GTFS permite horas posteriores a medianoche, como 25:10:00.
+
+Para adaptarlas al formato académico HH:MM, el conversor
+aplica módulo 24.
+
+Ejemplo:
+
+25:10:00 -> 01:10
+
+Esta transformación pierde la información de que el evento
+corresponde al día siguiente.
+
+### Consideraciones
+
+El archivo Datos_corregidos/horarios.csv puede superar los
+375 MB dependiendo del GTFS utilizado.
+
+Por esta razón, no se incluye directamente en el repositorio GitHub.
+
+Para utilizar los datos convertidos, primero debe ejecutarse
+el conversor con un archivo GTFS válido.
+
+Los archivos de Datos/ corresponden al conjunto académico
+utilizado durante el desarrollo y se conservan por separado.
+
+La estructura y los identificadores de las rutas pueden variar
+según la versión del GTFS utilizada.
