@@ -130,3 +130,46 @@ No existe un recorrido disponible.
 - Comprobar cierres y reaperturas mediante R8.
 - Comprobar deshacer y rehacer mediante R9.
 - Realizar pruebas de integración con los demás módulos.
+
+---
+
+## 11. Adaptador disponible para la integración
+
+Se creó el módulo:
+
+motor/integracion_r5.py
+
+Este módulo contiene la función:
+
+ejecutar_r5(rutas, estaciones, cerradas, origen, destino)
+
+La función recibe los datos compartidos del motor y ejecuta
+el algoritmo R5 utilizando el criterio de menor cantidad
+de paradas.
+
+Ejemplo de integración futura con la clase Red:
+
+    def viaje(self, origen, destino):
+        return ejecutar_r5(
+            self.rutas,
+            self.estaciones,
+            self.cerradas,
+            origen,
+            destino
+        )
+
+Los atributos de este ejemplo deberán adaptarse a la
+estructura definitiva que implemente el integrante 1.
+
+El adaptador reconstruye actualmente el índice de viajes
+en cada llamada para trabajar con los recorridos actualizados.
+
+Se realizó una prueba satisfactoria con la red pequeña,
+obteniendo un viaje con transbordo entre ALFA y EPSILON.
+
+Pendientes:
+
+- Confirmar el formato de retorno oficial.
+- Conectar el estado compartido de estaciones cerradas.
+- Verificar modificaciones reales de rutas realizadas por R7.
+- Integrar el método viaje en la clase Red definitiva.
