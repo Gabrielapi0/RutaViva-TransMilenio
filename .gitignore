@@ -1,0 +1,30 @@
+# Archivos temporales de Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Entornos virtuales
+.venv/
+venv/
+
+# Configuraciones locales
+.vscode/
+.idea/
+
+# Archivos temporales
+*.log
+*.tmp
+
+# Copias de seguridad y versiones antiguas
+*respaldo*
+*RESPALDO*
+*anterior*
+
+# Paquete independiente del integrante 3
+Entrega_Integrante_3/
+
+# Archivos GTFS originales muy grandes
+GTFS/
+*.zip
+# Horarios GTFS convertidos (archivo de 375 MB)
+Datos_corregidos/horarios.csv
