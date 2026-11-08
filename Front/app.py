@@ -233,7 +233,64 @@ if fuente == "Datos académicos del profesor (2021)":
 else:
     nombre_carpeta = "Datos_corregidos"
 
-# Cargamos las estaciones, rutas e índice de la fuente seleccionada.
+# Verificamos que existan los archivos requeridos.
+from pathlib import Path
+
+archivos_necesarios = [
+    "estaciones.csv",
+    "rutas.csv",
+    "horarios.csv"
+]
+
+# Revisamos si falta alguno de los tres archivos.
+archivos_faltantes = []
+
+for archivo in archivos_necesarios:
+    ruta_archivo = Path(nombre_carpeta) / archivo
+
+    if not ruta_archivo.is_file():
+        archivos_faltantes.append(archivo)
+
+# Si faltan archivos, mostramos un mensaje en lugar de generar un error.
+if archivos_faltantes:
+
+    st.markdown(
+    """
+    <div style="
+        background-color: #FFF3CD;
+        color: #664D03;
+        padding: 16px;
+        border-radius: 10px;
+        border: 1px solid #FFECB5;
+        font-weight: 600;
+    ">
+        ⚠️ Los datos seleccionados todavía no están completos.
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+    
+
+    st.info(
+        "Archivos faltantes: "
+        + ", ".join(archivos_faltantes)
+    )
+
+    if nombre_carpeta == "Datos_corregidos":
+        st.markdown(
+            "Para utilizar los datos GTFS, primero debes generar "
+            "los archivos con el conversor incluido en el proyecto. "
+            "Consulta las instrucciones del README."
+        )
+    else:
+        st.error(
+            "Faltan archivos del conjunto académico del profesor."
+        )
+
+    # Detenemos esta ejecución de la interfaz.
+    st.stop()
+
+# Si están los tres archivos, cargamos la red normalmente.
 estaciones, rutas, indice = preparar_red(nombre_carpeta)
 # Conservamos una lista de cierres provisional para la demostración.
 cerradas = ["CALLE 57"]
