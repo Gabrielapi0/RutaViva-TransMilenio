@@ -267,3 +267,161 @@ No sustituyen las pruebas de integración del proyecto completo.
 - El archivo grande no se incluye directamente en GitHub.
 - El README final deberá explicar cómo regenerar los CSV.
 - La integración definitiva dependerá de la clase Red del grupo.
+
+---
+
+# ANÁLISIS DE COMPLEJIDAD DE R5
+
+## 15. Variables utilizadas
+
+Para expresar la complejidad computacional se definen:
+
+- R: cantidad de rutas.
+- P: cantidad total de apariciones de paradas en las rutas.
+- C: cantidad de estaciones cerradas.
+- n: cantidad de registros de un arreglo ordenado.
+
+## 16. Ordenamiento de registros
+
+La función ordenar_por_nombre utiliza Merge Sort.
+
+Complejidad temporal: O(n log n).
+
+El algoritmo divide los registros en mitades y posteriormente
+combina los resultados ordenados.
+
+## 17. Búsqueda binaria
+
+La función limite_inferior utiliza búsqueda binaria.
+
+Complejidad temporal: O(log n).
+
+Su funcionamiento requiere que los registros estén ordenados.
+
+## 18. Verificación de estaciones cerradas
+
+La función esta_cerrada recorre una lista de estaciones cerradas.
+
+Complejidad temporal: O(C).
+
+En el peor caso debe comparar todos los nombres registrados
+en esa lista.
+
+## 19. Preparación de prefijos acumulados
+
+La función preparar_prefijos_cierres recorre las P apariciones
+de paradas de la red.
+
+Por cada parada ejecuta esta_cerrada.
+
+Complejidad temporal: O(P x C), como cota superior.
+
+Cuando no existen estaciones cerradas, el recorrido de las
+paradas mantiene un costo O(P).
+
+Complejidad espacial adicional: O(P + R), correspondiente
+a los arreglos de prefijos de las rutas.
+
+## 20. Consulta de disponibilidad de un tramo
+
+La función tramo_disponible consulta dos posiciones del arreglo
+de prefijos y calcula su diferencia.
+
+Complejidad temporal: O(1).
+
+Esta decisión evita recorrer todas las estaciones del tramo
+cada vez que se evalúa un posible viaje.
+
+## 21. Comparación de recorridos candidatos
+
+La función elegir_mejor compara un número fijo de valores
+entre dos alternativas.
+
+Complejidad temporal: O(1).
+
+El algoritmo prioriza la menor cantidad de tramos cuando
+se utiliza el criterio "paradas".
+
+En caso de empate entre un recorrido directo y uno con
+transbordo, favorece el directo.
+
+## 22. Búsqueda completa de R5
+
+## 22. Complejidad completa de la búsqueda R5
+
+El algoritmo R5 identifica recorridos directos o con un máximo de un transbordo, seleccionando la alternativa con menor cantidad de tramos.
+
+Para analizar su complejidad se definen las siguientes variables:
+
+- P: número total de apariciones de paradas en todas las rutas.
+- C: número de estaciones cerradas.
+- A: número de apariciones de la estación de origen.
+- B: número de apariciones de la estación de destino.
+- L: número máximo de paradas de una ruta.
+- M: número máximo de apariciones de una misma estación dentro de una ruta.
+
+### 22.1. Búsqueda de recorridos directos
+
+El algoritmo examina las apariciones del origen y busca las posiciones del destino en cada servicio correspondiente.
+
+La búsqueda de posiciones utiliza índices ordenados y búsqueda binaria.
+
+La complejidad temporal de esta fase está acotada por:
+
+**O(A × (log L + M))**
+
+### 22.2. Búsqueda de recorridos con transbordo
+
+El algoritmo evalúa combinaciones de servicios que pasan por el origen y servicios que llegan al destino.
+
+Para cada combinación examina posibles estaciones de cambio y utiliza búsqueda binaria para encontrar sus posiciones en el segundo servicio.
+
+La complejidad temporal de esta fase está acotada por:
+
+**O(A × B × L × (log L + M))**
+
+Esta cota corresponde al peor caso y puede disminuir cuando se descartan recorridos o se encuentran estaciones cerradas.
+
+### 22.3. Preparación de estaciones cerradas
+
+Antes de examinar los recorridos, el algoritmo construye arreglos de prefijos acumulados.
+
+Su complejidad temporal es:
+
+**O(P × (C + 1))**
+
+Después de esta preparación, comprobar si un tramo atraviesa una estación cerrada requiere O(1).
+
+### 22.4. Complejidad temporal total
+
+Considerando las búsquedas iniciales de origen y destino, la preparación de prefijos y la evaluación de recorridos, se obtiene la siguiente cota superior:
+
+**O(P × (C + 1) + log P + A + B + A × B × L × (log L + M))**
+
+Esta expresión supone que los índices de viajes ya fueron construidos y se reutilizan.
+
+Si se construye un índice nuevo, debe añadirse su costo de preparación.
+
+### 22.5. Justificación de la solución
+
+Se eligió utilizar índices ordenados y búsqueda binaria para reducir las consultas innecesarias sobre las rutas.
+
+Los prefijos acumulados permiten verificar rápidamente la disponibilidad de los recorridos.
+
+La búsqueda se limita a viajes directos o con un máximo de un transbordo, respetando el alcance del requisito R5.
+
+Aunque la búsqueda con transbordo puede presentar un costo elevado en el peor caso, evita examinar combinaciones que no tengan relación con el origen o el destino.
+
+La implementación prioriza la corrección de los resultados y el cumplimiento de las restricciones de estructuras de datos establecidas por el profesor.
+
+## 23. Alternativas consideradas
+
+Para comprobar cierres en los recorridos se consideró
+recorrer todas las estaciones de cada tramo.
+
+Se eligieron prefijos acumulados porque permiten consultar
+posteriormente la disponibilidad de un tramo en O(1).
+
+Esta alternativa requiere preparación previa y memoria
+adicional, pero evita repetir recorridos completos al
+evaluar distintas opciones de viaje.
