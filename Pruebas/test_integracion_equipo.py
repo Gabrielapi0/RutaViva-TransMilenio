@@ -14,7 +14,7 @@ sys.path.insert(0, str(raiz))
 
 def probar_integracion():
     try:
-        from motor import Red
+        from Pruebas import Red
     except ImportError:
         print("PENDIENTE: el integrante 1 debe integrar la clase Red.")
         return
