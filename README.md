@@ -57,7 +57,7 @@ La información se utiliza con fines académicos y no garantiza la disponibilida
 - `Datos/`: archivos académicos originales.
 - `Datos_corregidos/`: archivos convertidos desde GTFS.
 - `Front/`: interfaz y visualización geográfica.
-- `Motor/`: algoritmo de búsqueda de recorridos.
+- `motor/`: algoritmo de búsqueda de recorridos.
 - `requirements.txt`: dependencias necesarias.
 - `README.md`: instrucciones del proyecto.
 
@@ -71,6 +71,97 @@ La información se utiliza con fines académicos y no garantiza la disponibilida
 - Visualización del itinerario.
 - Mapa geográfico interactivo.
 - Selección entre los conjuntos de datos académicos y GTFS.
+
+## R12 — Decisiones de diseño
+
+Cada integrante documenta aquí sus requisitos: estructura, algoritmo,
+alternativa descartada y la O grande de cada operación, diciendo qué es n.
+
+### R5 · Planear un viaje (Integrante 3)
+
+**Qué resuelve:** entre dos estaciones, el viaje directo o con un solo
+transbordo que pase por menos paradas: qué ruta tomar, dónde bajarse y
+dónde cambiar. El código está en `motor/viajes.py`.
+
+**Estructuras**
+
+| Estructura | Qué guarda | Para qué |
+|---|---|---|
+| Rutas | Lista de `[servicio, [[orden, estación], ...]]`, con las paradas en el orden real del recorrido | Respetar el sentido de cada servicio |
+| Catálogo de estaciones | Arreglo de nombres ordenado alfabéticamente | Saber si una estación existe con búsqueda binaria |
+| Índice global | Arreglo ordenado de `[estación, ruta, posición]` | Encontrar solo los servicios que pasan por el origen o el destino |
+| Índice por ruta | Por cada ruta, arreglo ordenado de `[estación, posición]` | Saber en qué posición pasa una ruta por una estación |
+| Prefijos de cierres | Por cada ruta, cuántas estaciones cerradas hay hasta cada parada | Saber si un tramo tiene cierres en O(1) |
+
+Todo son listas usadas como arreglos: dentro de `motor/` no se usan
+`dict`, `set`, `sorted`, `.sort()`, `min`, `max`, `x in lista`, `.index()`
+ni `.count()`.
+
+**Algoritmo**
+
+1. Se valida que origen y destino existan y estén abiertos. Si son la
+   misma estación, el viaje tiene 0 paradas.
+2. *Directos:* para cada servicio que pasa por el origen se busca el
+   destino en una posición posterior y se revisa que el tramo no tenga
+   estaciones cerradas.
+3. Si hay un directo de 1 tramo, no se busca más: no existe algo más corto.
+4. *Un transbordo:* para cada par (servicio que sale del origen, servicio
+   que llega al destino) se recorren las paradas del primero después del
+   origen. En cada una se busca, con búsqueda binaria, si el segundo
+   servicio pasa por ahí antes del destino. Si el primer tramo ya tiene un
+   cierre, se corta, porque alargarlo no lo vuelve a abrir.
+5. Se queda el viaje con menos tramos. En empate gana el directo, y si
+   todo empata, el primero encontrado.
+
+Una estación cerrada no sirve ni de paso ni como punto de transbordo,
+porque los prefijos la detectan en cualquier tramo.
+
+**Respuestas definidas**
+
+| Caso | Respuesta |
+|---|---|
+| Viaje directo | `["DIRECTO", servicio, None, None, tramos]` |
+| Un transbordo | `["TRANSBORDO", servicio_1, servicio_2, estación_de_cambio, tramos]` |
+| Origen igual a destino | `["MISMO DESTINO", None, None, None, 0]` |
+| Estación inexistente o cerrada | `["ERROR", mensaje, None, None, 0]` |
+| Sin viaje con máximo un transbordo | `None` |
+
+**Alternativas descartadas**
+
+- *Recorrer todas las rutas en cada consulta:* cuesta O(P) por búsqueda
+  aunque el origen aparezca en pocas rutas. El índice ordenado limita la
+  búsqueda a los servicios que pasan por el origen y el destino.
+- *Un diccionario estación → rutas:* daría búsquedas en O(1), pero `dict`
+  está prohibido en `motor/`. Los arreglos ordenados con búsqueda binaria
+  dan O(log P), que es lo mejor posible sin diccionarios.
+- *BFS sobre un grafo de estaciones:* encuentra el camino con menos
+  paradas, pero no controla cuántas veces se cambia de bus. Limitarlo a un
+  transbordo exige guardar el servicio en cada estado, y la búsqueda por
+  fases es más simple y fácil de explicar.
+- *Revisar cada estación del tramo para ver si está cerrada:* cuesta O(L)
+  por tramo y se repite miles de veces por consulta. Los prefijos cuestan
+  O(P) una vez por consulta y luego O(1) por tramo.
+
+**Complejidad**
+
+Variables: **P** = apariciones de paradas en todas las rutas (filas de
+`rutas.csv`), **L** = paradas de la ruta más larga, **A** y **B** =
+apariciones del origen y del destino en la red, **M** = máximo de veces
+que una estación se repite en una misma ruta, **C** = estaciones cerradas.
+
+| Operación | Complejidad |
+|---|---|
+| Construir el índice (una vez por red) | O(P log P) |
+| Saber si una estación existe | O(log P) |
+| Preparar los prefijos de cierres | O(P × (C + 1)) |
+| Fase de directos | O(A × (log L + M)) |
+| Fase de un transbordo (peor caso) | O(A × B × L × (log L + M)) |
+
+En la práctica A y B son pequeños comparados con P: en `Datos/` una
+estación aparece en promedio en 13 rutas (máximo 45) de 1.927 paradas, y
+L = 33. En la red GTFS el promedio es 16 (máximo 166) de 58.132, y L = 176.
+R5 no se mide en rendimiento (diap. 11). El detalle completo está en
+`DOCUMENTACION_R5.md`.
 
 ## Conversión GTFS
 
@@ -154,7 +245,9 @@ corresponde al día siguiente.
 El archivo Datos_corregidos/horarios.csv puede superar los
 375 MB dependiendo del GTFS utilizado.
 
-Por esta razón, no se incluye directamente en el repositorio GitHub.
+Por esta razón, no se incluye directamente en el repositorio GitHub:
+GitHub rechaza archivos de más de 100 MB. Sí se incluyen
+`Datos_corregidos/estaciones.csv` y `Datos_corregidos/rutas.csv`.
 
 Para utilizar los datos convertidos, primero debe ejecutarse
 el conversor con un archivo GTFS válido.
