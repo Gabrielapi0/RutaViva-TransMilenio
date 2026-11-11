@@ -58,11 +58,17 @@ Motivo: están prohibidas por las instrucciones del proyecto.
 
 ### 3.2 Búsqueda binaria
 
-Se implementó una función que encuentra la primera posición
-cuyo nombre es mayor o igual al nombre buscado.
+La función `bloque` usa búsqueda binaria para encontrar la
+primera posición cuyo nombre es mayor o igual al buscado, y
+desde ahí recoge todas las coincidencias consecutivas.
 
-Complejidad temporal: O(log n), suponiendo comparaciones
-de nombres de costo constante.
+La usan `existe`, `servicios_de` y `posiciones_en_ruta` del
+índice, así que las tres consultas comparten una sola
+implementación.
+
+Complejidad temporal: O(log n + k), donde k es la cantidad de
+coincidencias, suponiendo comparaciones de nombres de costo
+constante.
 
 Alternativa descartada: búsqueda secuencial de todas las
 estaciones en cada consulta.
@@ -99,6 +105,10 @@ para comprobar si un tramo contiene estaciones cerradas.
 Una vez construida esa estructura, la consulta de cierre
 de un tramo se realiza en O(1).
 
+Para saber si una estación está cerrada se usa `esta_cerrada`,
+que recorre la lista de cierres con un for. No se usa
+`x in lista`, porque está prohibido dentro de motor/.
+
 La preparación debe repetirse cuando cambie el estado
 de cierre de la red.
 
@@ -125,8 +135,6 @@ redes de ejemplo utilizadas.
 - Conectar cierres y reaperturas con R8.
 - Actualizar el índice después de modificaciones de R7.
 - Comprobar el funcionamiento de deshacer y rehacer de R9.
-- Documentar la complejidad completa de la búsqueda R5.
-- Integrar la documentación de R5 en el README del grupo.
 
 ---
 
@@ -283,7 +291,7 @@ Para expresar la complejidad computacional se definen:
 
 ## 16. Ordenamiento de registros
 
-La función ordenar_por_nombre utiliza Merge Sort.
+La función ordenar utiliza Merge Sort.
 
 Complejidad temporal: O(n log n).
 
@@ -292,9 +300,11 @@ combina los resultados ordenados.
 
 ## 17. Búsqueda binaria
 
-La función limite_inferior utiliza búsqueda binaria.
+La función bloque utiliza búsqueda binaria y luego recoge
+las coincidencias consecutivas.
 
-Complejidad temporal: O(log n).
+Complejidad temporal: O(log n + k), donde k es la cantidad
+de coincidencias.
 
 Su funcionamiento requiere que los registros estén ordenados.
 
@@ -334,18 +344,19 @@ cada vez que se evalúa un posible viaje.
 
 ## 21. Comparación de recorridos candidatos
 
-La función elegir_mejor compara un número fijo de valores
-entre dos alternativas.
+La función clave convierte cada viaje en una lista de dos
+números, y elegir_mejor compara esas dos listas.
 
-Complejidad temporal: O(1).
+- Criterio "paradas": [tramos, cambios]. Gana el de menos
+  tramos; si empatan, el directo (0 cambios).
+- Criterio "transbordos": [cambios, tramos]. Gana el de menos
+  cambios; si empatan, el de menos tramos.
 
-El algoritmo prioriza la menor cantidad de tramos cuando
-se utiliza el criterio "paradas".
+Si las dos claves son iguales se conserva el viaje encontrado
+primero, para que el resultado sea siempre el mismo.
 
-En caso de empate entre un recorrido directo y uno con
-transbordo, favorece el directo.
-
-## 22. Búsqueda completa de R5
+Complejidad temporal: O(1), porque las listas siempre tienen
+dos elementos.
 
 ## 22. Complejidad completa de la búsqueda R5
 
@@ -400,7 +411,13 @@ Considerando las búsquedas iniciales de origen y destino, la preparación de pr
 
 Esta expresión supone que los índices de viajes ya fueron construidos y se reutilizan.
 
-Si se construye un índice nuevo, debe añadirse su costo de preparación.
+Si se construye un índice nuevo, debe añadirse su costo de preparación:
+**O(P log P)**, por los ordenamientos con Merge Sort del índice global y
+de cada ruta.
+
+La función `detalle_recorrido`, que entrega las estaciones del viaje a la
+interfaz, repite la búsqueda con cada criterio (máximo dos veces) y arma
+la lista de paradas, así que su costo es el de dos búsquedas más O(L).
 
 ### 22.5. Justificación de la solución
 
