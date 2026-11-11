@@ -215,7 +215,7 @@ def medir_red(Red, simular_fila, carpeta, factor):
 def correr_panel(carpeta_base="Datos", factores=FACTORES):
     """Mide todas las operaciones en redes de tamano f*n.
     Devuelve una lista de filas listas para graficar o mostrar en tabla."""
-    from motor import Red, simular_fila
+    from motor.__initial__ import Red, simular_fila
 
     temporal = tempfile.mkdtemp(prefix="rutaviva_panel_")
     mediciones = {}
