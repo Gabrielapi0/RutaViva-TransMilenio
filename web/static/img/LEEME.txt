@@ -1,0 +1,2 @@
+Pongan aquí el logo oficial con el nombre logo.png (fondo transparente o blanco, unos 200 px de alto).
+La barra superior lo muestra automáticamente; si no existe, aparece un pictograma de bus.
