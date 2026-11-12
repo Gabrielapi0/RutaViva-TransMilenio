@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RutaViva · Planeador TransMilenio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@500;600;700;800&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="static/css/estilos.css">
+</head>
+<body>
+
+<!-- ======== símbolos SVG reutilizables (vehículos y pictogramas) ======== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="g-rojo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ef3340"/><stop offset=".55" stop-color="#c8102e"/><stop offset="1" stop-color="#8f0a1f"/>
+    </linearGradient>
+    <linearGradient id="g-verde" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7cc242"/><stop offset="1" stop-color="#3f8a1f"/>
+    </linearGradient>
+    <linearGradient id="g-vidrio" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a4a5c"/><stop offset="1" stop-color="#11181f"/>
+    </linearGradient>
+  </defs>
+  <!-- Bus articulado troncal (vista lateral, puertas a la izquierda como en las estaciones centrales) -->
+  <symbol id="bus-articulado" viewBox="0 0 360 92">
+    <ellipse cx="180" cy="88" rx="176" ry="4" fill="#000" opacity=".18"/>
+    <!-- vagón delantero -->
+    <path d="M196 10 h146 q14 0 16 14 l2 46 q0 8 -8 8 H196z" fill="url(#g-rojo)"/>
+    <!-- vagón trasero -->
+    <path d="M6 10 h178 v68 H14 q-10 0 -10 -10 V18 q0 -8 2 -8z" fill="url(#g-rojo)"/>
+    <!-- fuelle -->
+    <rect x="184" y="12" width="12" height="64" fill="#2b2b2b"/>
+    <g stroke="#555" stroke-width="1.4"><path d="M187 14v60M190 14v60M193 14v60"/></g>
+    <!-- ventanas -->
+    <g fill="url(#g-vidrio)">
+      <rect x="16" y="18" width="34" height="26" rx="3"/><rect x="56" y="18" width="34" height="26" rx="3"/>
+      <rect x="96" y="18" width="34" height="26" rx="3"/><rect x="136" y="18" width="40" height="26" rx="3"/>
+      <rect x="204" y="18" width="34" height="26" rx="3"/><rect x="244" y="18" width="34" height="26" rx="3"/>
+      <rect x="284" y="18" width="40" height="26" rx="3"/>
+      <path d="M330 16 h16 q8 0 9 10 l1 22 h-26z"/>
+    </g>
+    <!-- puertas -->
+    <g fill="#1b232c" stroke="#e8e8e8" stroke-width="1.2">
+      <rect x="62" y="20" width="22" height="54" rx="2"/><rect x="146" y="20" width="22" height="54" rx="2"/>
+      <rect x="252" y="20" width="22" height="54" rx="2"/>
+    </g>
+    <!-- franja blanca y gris -->
+    <rect x="6" y="50" width="340" height="3" fill="#fff" opacity=".85"/>
+    <rect x="6" y="70" width="350" height="8" fill="#5b6168"/>
+    <!-- letrero de ruta -->
+    <rect x="334" y="10" width="20" height="5" rx="1" fill="#ffb000"/>
+    <!-- faro -->
+    <rect x="350" y="58" width="8" height="6" rx="2" fill="#fff6c4"/>
+    <!-- ruedas -->
+    <g><circle cx="44" cy="78" r="10" fill="#1d1d1d"/><circle cx="44" cy="78" r="4.5" fill="#9aa1a8"/>
+       <circle cx="216" cy="78" r="10" fill="#1d1d1d"/><circle cx="216" cy="78" r="4.5" fill="#9aa1a8"/>
+       <circle cx="318" cy="78" r="10" fill="#1d1d1d"/><circle cx="318" cy="78" r="4.5" fill="#9aa1a8"/></g>
+  </symbol>
+  <!-- Bus alimentador (verde) -->
+  <symbol id="bus-alimentador" viewBox="0 0 200 84">
+    <ellipse cx="100" cy="80" rx="96" ry="4" fill="#000" opacity=".18"/>
+    <path d="M6 10 h168 q16 0 18 16 l2 44 q0 8 -8 8 H12 q-8 0 -8 -8 V16 q0 -6 2 -6z" fill="url(#g-verde)"/>
+    <g fill="url(#g-vidrio)"><rect x="16" y="18" width="30" height="24" rx="3"/><rect x="52" y="18" width="30" height="24" rx="3"/>
+      <rect x="88" y="18" width="30" height="24" rx="3"/><rect x="124" y="18" width="30" height="24" rx="3"/>
+      <path d="M162 16 h14 q8 0 9 10 l1 18 h-24z"/></g>
+    <rect x="6" y="48" width="186" height="3" fill="#fff" opacity=".8"/>
+    <rect x="4" y="64" width="190" height="8" fill="#4d5359"/>
+    <circle cx="40" cy="72" r="9" fill="#1d1d1d"/><circle cx="40" cy="72" r="4" fill="#9aa1a8"/>
+    <circle cx="160" cy="72" r="9" fill="#1d1d1d"/><circle cx="160" cy="72" r="4" fill="#9aa1a8"/>
+  </symbol>
+  <!-- Bus de frente (pictograma) -->
+  <symbol id="pic-bus" viewBox="0 0 24 24">
+    <path fill="currentColor" d="M5 3h14a2 2 0 0 1 2 2v11a2 2 0 0 1-1 1.7V20a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H7v1a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2.3A2 2 0 0 1 3 16V5a2 2 0 0 1 2-2Zm1 3v5h12V6H6Zm1.5 7.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm9 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"/>
+  </symbol>
+  <symbol id="pic-persona" viewBox="0 0 12 24">
+    <circle cx="6" cy="4" r="3.2" fill="currentColor"/><path fill="currentColor" d="M2.5 9.5Q2.5 8 4 8h4q1.5 0 1.5 1.5V16H8v7H4v-7H2.5z"/>
+  </symbol>
+</svg>
+
+<header class="barra">
+  <div class="barra__marca">
+    <img id="logo-oficial" src="static/img/logo.png" alt="TransMilenio" onerror="this.remove(); document.body.classList.add('sin-logo')">
+    <div class="marca-alt" aria-hidden="true"><svg><use href="#pic-bus"/></svg></div>
+    <div class="barra__titulo">
+      <strong>RutaViva</strong>
+      <span>Planeador de viajes · Sistema TransMilenio</span>
+    </div>
+  </div>
+  <nav class="pestanas" id="pestanas">
+    <a href="#planear" data-tab="planear"><b>R5</b>Planear viaje</a>
+    <a href="#estaciones" data-tab="estaciones"><b>R1·R3·R4</b>Estaciones</a>
+    <a href="#ranking" data-tab="ranking"><b>R6</b>Ranking</a>
+    <a href="#control" data-tab="control"><b>R7·R8·R9</b>Centro de control</a>
+    <a href="#pico" data-tab="pico"><b>R10</b>Hora pico</a>
+    <a href="#rendimiento" data-tab="rendimiento"><b>R11</b>Rendimiento</a>
+  </nav>
+  <div class="reloj" id="reloj">--:--</div>
+</header>
+
+<!-- ======================= PLANEAR ======================= -->
+<section class="vista" id="v-planear">
+  <div class="escena" aria-hidden="true">
+    <svg class="escena__fondo" viewBox="0 0 1440 360" preserveAspectRatio="xMidYMax slice">
+      <defs>
+        <linearGradient id="cielo" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#b9d3e6"/><stop offset="1" stop-color="#eef3f6"/>
+        </linearGradient>
+      </defs>
+      <rect width="1440" height="360" fill="url(#cielo)"/>
+      <!-- cerros orientales -->
+      <path d="M0 210 C120 120 210 150 300 110 C380 80 430 40 520 70 C600 95 660 60 740 85 C830 115 900 70 990 95 C1080 120 1150 80 1240 110 C1320 135 1390 120 1440 140 V360 H0Z" fill="#7d9a86"/>
+      <path d="M0 240 C140 180 260 200 380 170 C520 140 620 180 760 160 C900 140 1010 175 1150 160 C1270 148 1360 170 1440 175 V360 H0Z" fill="#5f7d69"/>
+      <!-- santuario en el cerro -->
+      <g transform="translate(508 52)" fill="#f4f1ea"><rect x="0" y="8" width="18" height="12"/><rect x="6" y="0" width="6" height="10"/><path d="M6 0 l3 -5 l3 5z"/></g>
+      <!-- ciudad -->
+      <g fill="#8c99a6" opacity=".9">
+        <rect x="80" y="200" width="40" height="80"/><rect x="128" y="180" width="30" height="100"/><rect x="164" y="214" width="50" height="66"/>
+        <rect x="380" y="186" width="34" height="94"/><rect x="420" y="160" width="26" height="120"/><rect x="452" y="200" width="44" height="80"/>
+        <rect x="690" y="120" width="34" height="160"/><rect x="730" y="176" width="40" height="104"/><rect x="776" y="196" width="30" height="84"/>
+        <rect x="980" y="190" width="44" height="90"/><rect x="1030" y="170" width="30" height="110"/><rect x="1240" y="196" width="50" height="84"/><rect x="1296" y="176" width="30" height="104"/>
+      </g>
+      <g fill="#c8102e"><rect x="690" y="120" width="34" height="6"/></g>
+      <!-- troncal -->
+      <rect y="276" width="1440" height="84" fill="#4a4f55"/>
+      <rect y="272" width="1440" height="6" fill="#c9ccd0"/>
+      <g fill="#f2f2f2"><rect x="0" y="316" width="1440" height="3"/></g>
+      <g fill="#ffd200"><rect x="0" y="352" width="1440" height="4"/></g>
+      <!-- estación -->
+      <g transform="translate(560 180)">
+        <rect x="0" y="0" width="320" height="10" fill="#c8102e"/>
+        <rect x="0" y="10" width="320" height="6" fill="#9a0d23"/>
+        <rect x="6" y="16" width="308" height="80" fill="#d5e4ee" opacity=".55"/>
+        <g fill="#7b8792"><rect x="6" y="16" width="5" height="80"/><rect x="82" y="16" width="5" height="80"/><rect x="158" y="16" width="5" height="80"/><rect x="234" y="16" width="5" height="80"/><rect x="309" y="16" width="5" height="80"/></g>
+        <rect x="0" y="96" width="320" height="8" fill="#9aa3ab"/>
+        <rect x="118" y="-22" width="84" height="20" rx="3" fill="#fff" stroke="#c8102e" stroke-width="2"/>
+        <text x="160" y="-8" text-anchor="middle" font-family="Barlow Condensed, sans-serif" font-weight="700" font-size="13" fill="#c8102e">ESTACIÓN</text>
+      </g>
+    </svg>
+    <svg class="bus-anim bus-anim--1" viewBox="0 0 360 92"><use href="#bus-articulado"/></svg>
+    <svg class="bus-anim bus-anim--2" viewBox="0 0 360 92"><use href="#bus-articulado"/></svg>
+    <svg class="bus-anim bus-anim--3" viewBox="0 0 200 84"><use href="#bus-alimentador"/></svg>
+  </div>
+
+  <div class="contenedor planear">
+    <form class="tarjeta buscador" id="f-viaje" autocomplete="off">
+      <h1>¿Para dónde va?</h1>
+      <p class="sub">Viaje directo o con un solo transbordo, por la ruta que pase por menos paradas.</p>
+      <div class="campo campo--origen">
+        <label for="origen">Origen</label>
+        <input id="origen" class="ac" placeholder="Ej. PORTAL NORTE" required>
+      </div>
+      <button type="button" class="intercambiar" id="intercambiar" title="Intercambiar origen y destino">⇅</button>
+      <div class="campo campo--destino">
+        <label for="destino">Destino</label>
+        <input id="destino" class="ac" placeholder="Ej. PORTAL USME" required>
+      </div>
+      <div class="fila-campos">
+        <div class="campo"><label for="hora-viaje">Salgo a las</label><input id="hora-viaje" type="time" required></div>
+        <button class="boton boton--rojo" type="submit">Planear viaje</button>
+      </div>
+      <div class="sugeridos">Pruebe:
+        <button type="button" data-o="PORTAL NORTE" data-d="PORTAL USME">Portal Norte → Usme</button>
+        <button type="button" data-o="PORTAL SUBA" data-d="MUSEO DEL ORO">Suba → Museo del Oro</button>
+        <button type="button" data-o="PORTAL AMERICAS" data-d="CALLE 72">Américas → Calle 72</button>
+      </div>
+    </form>
+    <div id="resultado-viaje" class="resultado"></div>
+  </div>
+</section>
+
+<!-- ======================= ESTACIONES ======================= -->
+<section class="vista" id="v-estaciones" hidden>
+  <div class="contenedor">
+    <header class="encabezado"><h2>Estaciones</h2><p>Busque una estación, consulte un rango alfabético o mire la pantalla de llegadas.</p></header>
+    <div class="grilla-2">
+      <div class="tarjeta">
+        <h3><span class="req">R1</span> ¿Existe y está abierta?</h3>
+        <form id="f-estado" class="en-linea" autocomplete="off">
+          <input id="estado-nombre" class="ac" placeholder="Nombre exacto, ej. CALLE 26">
+          <button class="boton">Consultar</button>
+        </form>
+        <div id="res-estado"></div>
+        <h3 class="mt"><span class="req">R3</span> Estaciones abiertas entre dos nombres</h3>
+        <form id="f-rango" class="en-linea" autocomplete="off">
+          <input id="rango-desde" placeholder="Desde, ej. CALLE 26" value="CALLE 26">
+          <input id="rango-hasta" placeholder="Hasta, ej. CALLE 80" value="CALLE 80">
+          <button class="boton">Listar</button>
+        </form>
+        <div id="res-rango" class="baldosas"></div>
+      </div>
+      <div class="tarjeta tarjeta--oscura">
+        <h3><span class="req">R4</span> Pantalla de la estación</h3>
+        <form id="f-pantalla" class="en-linea" autocomplete="off">
+          <input id="pantalla-est" class="ac" placeholder="Estación" value="RICAURTE">
+          <input id="pantalla-hora" type="time">
+          <button class="boton boton--rojo">Ver</button>
+        </form>
+        <div id="pantalla" class="led"></div>
+        <form id="f-proximo" class="en-linea mt" autocomplete="off">
+          <input id="prox-est" class="ac" placeholder="Estación">
+          <select id="prox-ruta"><option value="">Ruta…</option></select>
+          <input id="prox-hora" type="time">
+          <button class="boton">Próximo bus</button>
+        </form>
+        <div id="res-proximo"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= RANKING ======================= -->
+<section class="vista" id="v-ranking" hidden>
+  <div class="contenedor">
+    <header class="encabezado"><h2>Las estaciones con más buses al día</h2>
+      <p>Solo estaciones abiertas. Cambia cuando se cierra, se reabre o se edita una ruta.</p></header>
+    <div class="tarjeta">
+      <div class="en-linea"><label for="rk-k">¿Cuántas?</label><input id="rk-k" type="range" min="3" max="30" value="10"><output id="rk-kv">10</output></div>
+      <div id="podio" class="podio"></div>
+      <ol id="lista-ranking" class="ranking"></ol>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= CONTROL ======================= -->
+<section class="vista" id="v-control" hidden>
+  <div class="contenedor">
+    <header class="encabezado encabezado--control">
+      <div><h2>Centro de control</h2><p>Edite recorridos, cierre estaciones y deshaga cualquier cambio en orden.</p></div>
+      <div class="historial">
+        <button class="boton" id="b-deshacer" title="Ctrl+Z">↶ Deshacer <span id="n-deshacer">0</span></button>
+        <button class="boton" id="b-rehacer" title="Ctrl+Y">↷ Rehacer <span id="n-rehacer">0</span></button>
+      </div>
+    </header>
+    <div class="tarjeta">
+      <div id="aviso-integracion" class="aviso-int" hidden></div>
+      <h3><span class="req">R7</span> Recorrido de la ruta</h3>
+      <div class="en-linea">
+        <input id="ctl-ruta-filtro" placeholder="Filtrar rutas, ej. B, K, 1-">
+        <select id="ctl-ruta"></select>
+        <label class="interruptor"><input type="checkbox" id="ctl-reves"><span>Sentido inverso</span></label>
+      </div>
+      <div id="ctl-tira" class="tira-contenedor"></div>
+      <form id="f-agregar" class="en-linea mt" autocomplete="off">
+        <span>Agregar</span><input id="ag-nueva" class="ac" placeholder="Estación nueva">
+        <span>después de</span><select id="ag-despues"></select>
+        <button class="boton boton--rojo">Agregar parada</button>
+      </form>
+      <p class="ayuda">Toque × sobre una parada para quitarla de la ruta.</p>
+    </div>
+    <div class="grilla-2">
+      <div class="tarjeta">
+        <h3><span class="req">R8</span> Cerrar o reabrir estaciones</h3>
+        <form id="f-cerrar" class="en-linea" autocomplete="off">
+          <input id="cerrar-nombre" class="ac" data-incluir-cerradas="1" placeholder="Estación">
+          <button class="boton boton--rojo" data-accion="cerrar">Cerrar</button>
+          <button class="boton" data-accion="reabrir">Reabrir</button>
+        </form>
+        <div id="lista-cerradas" class="baldosas"></div>
+      </div>
+      <div class="tarjeta">
+        <h3><span class="req">R9</span> Bitácora</h3>
+        <ol id="bitacora" class="bitacora"><li class="vacio">Sin cambios todavía.</li></ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= HORA PICO ======================= -->
+<section class="vista" id="v-pico" hidden>
+  <div class="contenedor">
+    <header class="encabezado"><h2>Simulador de hora pico</h2>
+      <p>Los buses salen cada cierto tiempo con cupo limitado y la gente sube en orden de llegada.</p></header>
+    <div class="grilla-pico">
+      <form class="tarjeta" id="f-fila">
+        <h3><span class="req">R10</span> Parámetros</h3>
+        <label>Pasajeros <input id="fl-p" type="number" min="1" max="50000" value="15000"></label>
+        <label>Ventana (min) <input id="fl-v" type="number" min="5" max="240" value="90"></label>
+        <label>Un bus cada (min) <input id="fl-f" type="number" min="1" max="60" value="1"></label>
+        <label>Cupo por bus <input id="fl-c" type="number" min="1" max="400" value="160"></label>
+        <label>Llegada de la gente
+          <select id="fl-patron"><option value="pico">Pico en la mitad</option><option value="uniforme">Pareja</option><option value="oleadas">Por oleadas (alimentadores)</option></select></label>
+        <button class="boton boton--rojo">Simular</button>
+        <p class="ayuda">Cupo típico: articulado 160, biarticulado 250.</p>
+      </form>
+      <div class="tarjeta">
+        <div class="anden" id="anden">
+          <div class="anden__techo"></div>
+          <div class="anden__vidrio"></div>
+          <div class="anden__fila" id="anden-fila"></div>
+          <div class="anden__borde"></div>
+          <div class="anden__via"></div>
+          <div class="anden__bus" id="anden-bus"><svg viewBox="0 0 360 92"><use href="#bus-articulado"/></svg></div>
+          <div class="anden__suben" id="anden-suben"></div>
+          <div class="anden__hora" id="anden-hora">06:00</div>
+          <div class="anden__leyenda" id="anden-leyenda"></div>
+        </div>
+        <div id="fila-stats" class="stats"></div>
+        <div id="fila-grafica" class="grafica"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= RENDIMIENTO ======================= -->
+<section class="vista" id="v-rendimiento" hidden>
+  <div class="contenedor">
+    <header class="encabezado encabezado--control">
+      <div><h2>Panel de rendimiento</h2>
+        <p id="rend-sub">Panel R11 del equipo.</p></div>
+      <button class="boton boton--rojo" id="b-medir">Volver a medir</button>
+    </header>
+    <div id="rend-grilla" class="rend-grilla"></div>
+  </div>
+</section>
+
+<footer class="pie">
+  RutaViva · Proyecto académico de Estructuras de Datos y Algoritmos. No está afiliado a TransMilenio S.A.
+  Datos: GTFS de TransMilenio (julio de 2021).
+  <span id="pie-info"></span>
+</footer>
+
+<div class="aviso" id="aviso" role="status"></div>
+<script src="static/js/app.js"></script>
+</body>
+</html>

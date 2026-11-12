@@ -1,0 +1,246 @@
+{
+ "copias": [
+  1,
+  2,
+  4
+ ],
+ "tamanos": [
+  147,
+  294,
+  588
+ ],
+ "fecha": "2026-11-12 11:32",
+ "operaciones": [
+  {
+   "clave": "carga",
+   "requisito": "Carga",
+   "etiqueta": "Red(carpeta)",
+   "o": "O(n log n)",
+   "n": "",
+   "medido": [
+    514887.41799994383,
+    1302382.0670000531,
+    2449353.385999984
+   ],
+   "esperado": [
+    514887.41799994383,
+    1089995.1342647278,
+    2300430.8650591355
+   ],
+   "razon": 2.205061046345528,
+   "razon_esperada": 2.1137273195516686,
+   "coincide": true,
+   "explicacion": "Lee los 3 CSV y ordena ~E eventos de horarios con merge sort propio."
+  },
+  {
+   "clave": "estado",
+   "requisito": "R1",
+   "etiqueta": "estado(nombre)",
+   "o": "O(log n)",
+   "n": "",
+   "medido": [
+    40.722829999898146,
+    80.04991000007067,
+    178.90631999989637
+   ],
+   "esperado": [
+    40.722829999898146,
+    43.10426415720213,
+    45.485698314506116
+   ],
+   "razon": 2.1003301469965505,
+   "razon_esperada": 1.0568636597758343,
+   "coincide": false,
+   "explicacion": "CONFIRMAR con Integrante 1."
+  },
+  {
+   "clave": "autocompletar",
+   "requisito": "R2",
+   "etiqueta": "autocompletar('CAL', 5)",
+   "o": "O(log n)",
+   "n": "",
+   "medido": [
+    82.99702000006921,
+    184.83867666645892,
+    407.873976666527
+   ],
+   "esperado": [
+    82.99702000006921,
+    87.85061044020074,
+    92.70420088033227
+   ],
+   "razon": 2.2168502013189975,
+   "razon_esperada": 1.0568636597758343,
+   "coincide": false,
+   "explicacion": "CONFIRMAR con Integrante 1 (log n + k, k fijo)."
+  },
+  {
+   "clave": "rango",
+   "requisito": "R3",
+   "etiqueta": "rango('CALLE 26','CALLE 80')",
+   "o": "O(n)",
+   "n": "",
+   "medido": [
+    88.39650000027177,
+    196.28988000022218,
+    431.68242000092505
+   ],
+   "esperado": [
+    88.39650000027177,
+    176.79300000054354,
+    353.5860000010871
+   ],
+   "razon": 2.2098852077516553,
+   "razon_esperada": 2.0,
+   "coincide": true,
+   "explicacion": "CONFIRMAR con Integrante 1. Es O(log n + m); al duplicar la red las copias 'CALLE 3X X2' caen dentro del rango, asi que m tambien se duplica."
+  },
+  {
+   "clave": "proximo_bus",
+   "requisito": "R4",
+   "etiqueta": "proximo_bus(est, ruta, hora)",
+   "o": "O(log n)",
+   "n": "",
+   "medido": [
+    2.84660333325822,
+    3.12497666679216,
+    3.296649999811052
+   ],
+   "esperado": [
+    2.84660333325822,
+    3.0130701139346483,
+    3.1795368946110765
+   ],
+   "razon": 1.0763636398389984,
+   "razon_esperada": 1.0568636597758343,
+   "coincide": true,
+   "explicacion": "Dos busquedas binarias: clave ruta-estacion (log G) y hora (log H)."
+  },
+  {
+   "clave": "ranking",
+   "requisito": "R6",
+   "etiqueta": "ranking(10)",
+   "o": "O(1)",
+   "n": "",
+   "medido": [
+    1.1540966666719517,
+    1.2015433333090186,
+    1.2080433331599731
+   ],
+   "esperado": [
+    1.1540966666719517,
+    1.1540966666719517,
+    1.1540966666719517
+   ],
+   "razon": 1.0232606138533784,
+   "razon_esperada": 1.0,
+   "coincide": true,
+   "explicacion": "Precalculado: con cache valida solo copia k=10 elementos -> O(k)."
+  },
+  {
+   "clave": "ranking_cierre",
+   "requisito": "R6",
+   "etiqueta": "cerrar + ranking(10) + reabrir",
+   "o": "O(n)",
+   "n": "",
+   "medido": [
+    23.032350000562474,
+    42.491649998055436,
+    81.54922499841177
+   ],
+   "esperado": [
+    23.032350000562474,
+    46.06470000112495,
+    92.1294000022499
+   ],
+   "razon": 1.8820252765898136,
+   "razon_esperada": 2.0,
+   "coincide": true,
+   "explicacion": "Cerrar invalida el nivel 2 de la cache: se refiltra la lista de S estaciones."
+  },
+  {
+   "clave": "editar",
+   "requisito": "R7",
+   "etiqueta": "agregar_parada + quitar_parada",
+   "o": "O(1)",
+   "n": "",
+   "medido": [
+    0.07689999961257854,
+    0.07704999802626844,
+    0.07892500093475974
+   ],
+   "esperado": [
+    0.07689999961257854,
+    0.07689999961257854,
+    0.07689999961257854
+   ],
+   "razon": 1.0131427252151264,
+   "razon_esperada": 1.0,
+   "coincide": true,
+   "explicacion": "CONFIRMAR con Integrante 4. Duplicar la red duplica la CANTIDAD de rutas, no su longitud; si la ruta se ubica en O(log R) o O(1) no deberia crecer."
+  },
+  {
+   "clave": "cerrar",
+   "requisito": "R8",
+   "etiqueta": "cerrar + reabrir",
+   "o": "O(log n)",
+   "n": "",
+   "medido": [
+    1.2296250019971922,
+    2.0188500002404908,
+    3.579225000294173
+   ],
+   "esperado": [
+    1.2296250019971922,
+    1.3015323566785446,
+    1.373439711359897
+   ],
+   "razon": 1.7073724563651522,
+   "razon_esperada": 1.0568636597758343,
+   "coincide": false,
+   "explicacion": "CONFIRMAR con Integrante 4."
+  },
+  {
+   "clave": "deshacer",
+   "requisito": "R9",
+   "etiqueta": "cerrar + deshacer",
+   "o": "O(1)",
+   "n": "",
+   "medido": [
+    1.183000000537504,
+    1.9527749998360378,
+    3.5770500005583017
+   ],
+   "esperado": [
+    1.183000000537504,
+    1.183000000537504,
+    1.183000000537504
+   ],
+   "razon": 1.741237616843088,
+   "razon_esperada": 1.0,
+   "coincide": false,
+   "explicacion": "CONFIRMAR con Integrante 4 (pila: O(1) + costo de la operacion)."
+  },
+  {
+   "clave": "fila",
+   "requisito": "R10",
+   "etiqueta": "simular_fila(llegadas, 5, 100)",
+   "o": "O(n)",
+   "n": "",
+   "medido": [
+    67313.3880000023,
+    135480.1769999767,
+    268157.7030000426
+   ],
+   "esperado": [
+    67313.3880000023,
+    134626.7760000046,
+    269253.5520000092
+   ],
+   "razon": 1.9959956150691314,
+   "razon_esperada": 2.0,
+   "coincide": true,
+   "explicacion": "CONFIRMAR con Integrante 1. n = numero de llegadas."
+  }
+ ]
+}
