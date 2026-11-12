@@ -6,57 +6,35 @@ RutaViva es una aplicación académica desarrollada en Python que permite consul
 
 El sistema identifica viajes directos y alternativas con máximo un transbordo. También permite seleccionar recorridos según la cantidad de tramos o de cambios de servicio.
 
-Incluye una interfaz desarrollada con Streamlit, un diagrama de estaciones y un mapa geográfico interactivo.
+Incluye una interfaz web con estilo TransMilenio: planeador de viajes, pantalla de llegadas por estación, ranking, centro de control, simulador de hora pico y panel de rendimiento.
 
 ## Requisitos
 
-- Python 3.14 o una versión compatible con las dependencias.
-- Conexión a internet para cargar los mapas base, cuando sea necesario.
-- Streamlit 1.66.1.
+- Python 3.10 o superior. La app no necesita instalar nada: el servidor usa solo la librería estándar.
 
-## Instalación
+## Ejecución (un solo comando)
 
-Abrir una terminal dentro de la carpeta principal del proyecto.
+Desde la carpeta principal del proyecto:
 
-Instalar las dependencias:
+    python app.py
 
-```powershell
-python -m pip install -r requirements.txt
-```
+La aplicación se abre sola en el navegador. Si no, visitar http://localhost:8000
 
-## Ejecución
+Opciones: `python app.py --puerto 8080` · `python app.py --datos Pruebas/Red_pequena` · `--sin-navegador`
 
-Desde la carpeta principal del proyecto, ejecutar:
+## Fuente de información
 
-```powershell
-python -m streamlit run Front/app.py
-```
-
-La aplicación se abrirá en el navegador.
-
-Si no se abre automáticamente, visitar:
-
-http://localhost:8501
-
-## Fuentes de información
-
-RutaViva permite trabajar con dos conjuntos de datos:
-
-**Datos académicos del profesor:** archivos CSV proporcionados para el desarrollo del proyecto.
-
-**Datos GTFS convertidos:** archivos generados a partir de un conjunto GTFS descargado en 2026.
-
-Los datos convertidos se encuentran en `Datos_corregidos`.
+Los archivos de `Datos/` son la red de TransMilenio convertida desde el GTFS de julio de 2021, que es la fuente que pide el enunciado. La aplicación y el motor solo leen esos tres CSV.
 
 La información se utiliza con fines académicos y no garantiza la disponibilidad actual de los servicios.
 
 ## Estructura del proyecto
 
-- `Assets/`: recursos visuales.
 - `Conversion/`: conversor GTFS y programas de validación.
-- `Datos/`: archivos académicos originales.
-- `Datos_corregidos/`: archivos convertidos desde GTFS.
-- `Front/`: interfaz y visualización geográfica.
+- `Datos/`: estaciones.csv, rutas.csv y horarios.csv (GTFS julio 2021).
+- `app.py`: servidor de la interfaz web (traduce peticiones a llamadas del motor).
+- `web/`: interfaz (HTML, CSS y JavaScript).
+- `Front/`: panel de rendimiento (R11) y pantalla de operación (R7–R9).
 - `Motor/`: algoritmo de búsqueda de recorridos.
 - `requirements.txt`: dependencias necesarias.
 - `README.md`: instrucciones del proyecto.
@@ -68,9 +46,8 @@ La información se utiliza con fines académicos y no garantiza la disponibilida
 - Búsqueda de recorridos con máximo un transbordo.
 - Selección entre menos tramos y menos transbordos.
 - Simulación de estaciones cerradas.
-- Visualización del itinerario.
-- Mapa geográfico interactivo.
-- Selección entre los conjuntos de datos académicos y GTFS.
+- Visualización del itinerario con hora del próximo bus.
+- Pantalla de llegadas por estación, ranking, centro de control, simulador de hora pico y panel de rendimiento.
 
 ## Conversión GTFS
 
@@ -81,7 +58,7 @@ Para generar nuevamente los archivos convertidos se necesita disponer de un arch
 Ejemplo:
 
 ```powershell
-python Conversion/convertir.py --entrada GTFS/GTFS-2026-04-29.zip --salida Datos_corregidos
+python Conversion/convertir.py --entrada GTFS/gtfs_julio_2021.zip --salida Datos_corregidos
 ```
 
 **Importante:** el archivo GTFS original no está incluido necesariamente en esta versión de entrega. Si se desea reproducir la conversión, debe colocarse en la ubicación indicada o modificar el argumento `--entrada`.
