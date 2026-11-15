@@ -1,3 +1,5 @@
+# motor/fila.py
+
 class Nodo:
     def __init__(self, valor):
         self.valor = valor
@@ -5,6 +7,7 @@ class Nodo:
 
 
 class Cola:
+   
     def __init__(self):
         self.frente = None
         self.final = None
@@ -35,27 +38,31 @@ class Cola:
 
 
 def simular_fila(llegadas, frecuencia, capacidad):
+    """
+    R10: Simula la fila de abordaje en O(n) con cola lineal propia.
+    Retorna lista: [pasajeros_atendidos, pasajeros_en_espera, espera_promedio].
+    """
     cola = Cola()
     pasajeros_atendidos = 0
     espera_total = 0
 
-    for minuto in range(len(llegadas)):
+    minuto = 0
+    total_minutos = len(llegadas)
+    while minuto < total_minutos:
         personas = llegadas[minuto]
-        for _ in range(personas):
+        p = 0
+        while p < personas:
             cola.encolar(minuto)
+            p += 1
 
-        if (minuto + 1) % frecuencia == 0:
+        if frecuencia > 0 and (minuto + 1) % frecuencia == 0:
             subieron = 0
             while not cola.esta_vacia() and subieron < capacidad:
                 minuto_llegada = cola.desencolar()
                 espera_total += (minuto - minuto_llegada)
                 pasajeros_atendidos += 1
                 subieron += 1
+        minuto += 1
 
-    espera_promedio = (espera_total / pasajeros_atendidos) if pasajeros_atendidos > 0 else 0
-
-    return {
-        "atendidos": pasajeros_atendidos,
-        "en_espera": cola.tamano,
-        "espera_promedio": espera_promedio
-    }
+    espera_promedio = (espera_total / pasajeros_atendidos) if pasajeros_atendidos > 0 else 0.0
+    return [pasajeros_atendidos, cola.tamano, espera_promedio]

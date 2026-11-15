@@ -1,20 +1,28 @@
+# motor/cargador.py
 import csv
-import os
+
 
 def _limpiar(texto):
     if not texto:
         return ""
-    return texto.strip().replace('\r', '').replace('\n', '')
+    return texto.strip().replace("\r", "").replace("\n", "")
+
+
+def _ruta_archivo(carpeta, nombre_archivo):
+    base = carpeta.rstrip("/\\")
+    return base + "/" + nombre_archivo
 
 
 def cargar_estaciones(carpeta):
-    ruta_csv = os.path.join(carpeta, "estaciones.csv")
+    ruta_csv = _ruta_archivo(carpeta, "estaciones.csv")
     estaciones = []
-    if not os.path.exists(ruta_csv):
+    try:
+        archivo = open(ruta_csv, mode="r", encoding="utf-8", newline="")
+    except OSError:
         return estaciones
 
-    with open(ruta_csv, mode='r', encoding='utf-8') as f:
-        lector = csv.reader(f)
+    with archivo:
+        lector = csv.reader(archivo)
         encabezado = True
         for fila in lector:
             if encabezado:
@@ -28,13 +36,15 @@ def cargar_estaciones(carpeta):
 
 
 def cargar_rutas(carpeta):
-    ruta_csv = os.path.join(carpeta, "rutas.csv")
+    ruta_csv = _ruta_archivo(carpeta, "rutas.csv")
     rutas_raw = []
-    if not os.path.exists(ruta_csv):
+    try:
+        archivo = open(ruta_csv, mode="r", encoding="utf-8", newline="")
+    except OSError:
         return []
 
-    with open(ruta_csv, mode='r', encoding='utf-8') as f:
-        lector = csv.reader(f)
+    with archivo:
+        lector = csv.reader(archivo)
         encabezado = True
         for fila in lector:
             if encabezado:
@@ -61,25 +71,29 @@ def cargar_rutas(carpeta):
 
     for r in rutas_resultado:
         paradas = r[1]
-        for i in range(1, len(paradas)):
+        i = 1
+        while i < len(paradas):
             clave = paradas[i]
             j = i - 1
             while j >= 0 and paradas[j][0] > clave[0]:
                 paradas[j + 1] = paradas[j]
                 j -= 1
             paradas[j + 1] = clave
+            i += 1
 
     return rutas_resultado
 
 
 def cargar_horarios(carpeta):
-    ruta_csv = os.path.join(carpeta, "horarios.csv")
+    ruta_csv = _ruta_archivo(carpeta, "horarios.csv")
     horarios = []
-    if not os.path.exists(ruta_csv):
+    try:
+        archivo = open(ruta_csv, mode="r", encoding="utf-8", newline="")
+    except OSError:
         return horarios
 
-    with open(ruta_csv, mode='r', encoding='utf-8') as f:
-        lector = csv.reader(f)
+    with archivo:
+        lector = csv.reader(archivo)
         encabezado = True
         for fila in lector:
             if encabezado:
