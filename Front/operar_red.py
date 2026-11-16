@@ -8,7 +8,7 @@ Es un Blueprint de Flask. En Front/app.py (de la Integrante 3) basta con:
 Si el front usa otro framework, la logica es solo llamar a los metodos de red.
 Aqui se puede usar cualquier libreria (esto NO es motor/).
 """
-from flask import Blueprint, jsonify, request, Response
+from flask import Blueprint, jsonify, request, Response # type: ignore
 
 PAGINA = """<!doctype html><html lang="es"><meta charset="utf-8">
 <title>Operar la red</title>
