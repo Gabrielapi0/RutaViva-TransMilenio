@@ -1,1 +1,2 @@
-﻿streamlit==1.66.1
+# La app (python app.py) no necesita dependencias: solo usa la libreria estandar.
+# Opcional: matplotlib, para la imagen PNG de Front/panel_rendimiento.py
