@@ -155,47 +155,53 @@ def api_pantalla(q):
 
 
 def api_fila(q):
-    """R10 del equipo: simular_fila(llegadas, frecuencia, capacidad) con
-    llegadas[minuto] = personas que llegan en ese minuto. Devuelve un dict con
-    atendidos, en_espera y espera_promedio."""
-    p = max(1, min(int(q.get("pasajeros", 15000)), 50000))
+    """R10 del equipo: simular_fila(llegadas, frecuencia, capacidad).
+    llegadas = minuto en que llega cada pasajero; devuelve la lista con el minuto
+    en que sube cada uno (mismo orden). Aquí solo se generan las llegadas y se
+    resumen los resultados del motor para dibujarlos."""
+    p = max(1, min(int(q.get("pasajeros", 15000)), 600000))
     ventana = max(5, min(int(q.get("ventana", 90)), 240))
     frec = max(1, int(q.get("frecuencia", 1)))
     cap = max(1, int(q.get("capacidad", 160)))
     patron = q.get("patron", "pico")
+    inicio = 6 * 60
     rnd = random.Random(int(q.get("semilla", 42)))
-    llegadas = [0] * ventana
+    llegadas = []
     for _ in range(p):
         if patron == "uniforme":
             m = rnd.randrange(ventana)
-        elif patron == "oleadas":
+        elif patron == "oleadas":  # llegan en grupos (alimentadores) cada ~6 min
             m = min(ventana - 1, rnd.randrange(0, ventana, 6) + int(rnd.expovariate(1.2)))
-        else:
+        else:  # pico en la mitad de la ventana
             m = min(ventana - 1, int(rnd.triangular(0, ventana, ventana * 0.45)))
-        llegadas[m] += 1
+        llegadas.append(inicio + m)
+    llegadas.sort()
 
     t0 = time.perf_counter()
-    total = simular_fila(llegadas, frec, cap)
+    abordaje = simular_fila(llegadas, frec, cap)
     ms = (time.perf_counter() - t0) * 1000
 
-    # Serie para la animación: el MISMO motor corrido sobre los primeros m minutos,
-    # en cada minuto en que sale un bus (así la página no recalcula nada por su cuenta).
-    salidas = [m for m in range(ventana) if (m + 1) % frec == 0]
-    paso = max(1, len(salidas) // 120)
-    serie, atendidos_antes = [], 0
-    for m in salidas[::paso]:
-        parcial = simular_fila(llegadas[:m + 1], frec, cap)
-        serie.append({"t": 360 + m, "h": hhmm(360 + m), "cola": parcial["en_espera"],
-                      "suben": parcial["atendidos"] - atendidos_antes})
-        atendidos_antes = parcial["atendidos"]
-    if not serie:
-        serie = [{"t": 360, "h": "06:00", "cola": total["en_espera"], "suben": 0}]
+    esperas = sorted(a - l for a, l in zip(abordaje, llegadas))
+    suben = {}
+    for a in abordaje:
+        suben[a] = suben.get(a, 0) + 1
+    salidas = sorted(suben)
+    # personas esperando justo después de cada salida
+    serie, k_ll, k_ab = [], 0, 0
+    ab_ord = sorted(abordaje)
+    for t in salidas:
+        while k_ll < p and llegadas[k_ll] <= t:
+            k_ll += 1
+        while k_ab < p and ab_ord[k_ab] <= t:
+            k_ab += 1
+        serie.append({"t": t, "h": hhmm(t), "cola": k_ll - k_ab, "suben": suben[t]})
+    paso = max(1, len(serie) // 240)
     return {
         "pasajeros": p, "frecuencia": frec, "capacidad": cap, "ms_motor": round(ms, 1),
-        "buses": len(salidas), "atendidos": total["atendidos"], "en_espera": total["en_espera"],
-        "espera_promedio": total["espera_promedio"], "cola_max": max(s["cola"] for s in serie),
-        "llenos": sum(1 for s in serie if s["suben"] >= cap * paso) if paso == 1 else None,
-        "serie": serie, "inicio": "06:00", "fin": hhmm(360 + ventana),
+        "buses": len(salidas), "atendidos": p, "en_espera": 0,
+        "espera_promedio": sum(esperas) / p, "cola_max": max(s["cola"] for s in serie),
+        "llenos": sum(1 for v in suben.values() if v >= cap),
+        "serie": serie[::paso], "inicio": hhmm(inicio), "fin": hhmm(salidas[-1]),
     }
 
 

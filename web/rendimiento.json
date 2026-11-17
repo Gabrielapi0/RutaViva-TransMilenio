@@ -1,0 +1,270 @@
+{
+ "copias": [
+  1,
+  2,
+  4,
+  8
+ ],
+ "tamanos": [
+  147,
+  294,
+  588,
+  1176
+ ],
+ "fecha": "2026-11-16 20:47",
+ "operaciones": [
+  {
+   "clave": "carga",
+   "requisito": "Carga",
+   "etiqueta": "Red(carpeta)",
+   "o": "O(n log n)",
+   "n": "",
+   "medido": [
+    630158.6980000024,
+    1217616.4770000356,
+    2513011.5280000498,
+    5683115.766000015
+   ],
+   "esperado": [
+    630158.6980000024,
+    1334019.6140405077,
+    2815443.6641620216,
+    5925696.200486054
+   ],
+   "razon": 2.085863920938768,
+   "razon_esperada": 2.110721992252224,
+   "coincide": true,
+   "explicacion": "Lee los 3 CSV y ordena ~E eventos de horarios con merge sort propio."
+  },
+  {
+   "clave": "estado",
+   "requisito": "R1",
+   "etiqueta": "estado(nombre)",
+   "o": "O(log n)",
+   "n": "",
+   "medido": [
+    1.2365166666465182,
+    1.4419100000395701,
+    1.4539000000013402,
+    1.5297166667475417
+   ],
+   "esperado": [
+    1.2365166666465182,
+    1.3088270396248953,
+    1.3811374126032727,
+    1.4534477855816497
+   ],
+   "razon": 1.075522953073888,
+   "razon_esperada": 1.055360996126112,
+   "coincide": true,
+   "explicacion": "Integrante 1: hoy recorre todas las estaciones y todas las rutas (lineal). Para O(log n) debe usar busqueda binaria sobre las estaciones ordenadas al cargar."
+  },
+  {
+   "clave": "autocompletar",
+   "requisito": "R2",
+   "etiqueta": "autocompletar('CAL', 5)",
+   "o": "O(log n)",
+   "n": "",
+   "medido": [
+    1.153486666680692,
+    1.2876466666966735,
+    1.4099266667244592,
+    1.4195933332909287
+   ],
+   "esperado": [
+    1.153486666680692,
+    1.2209415205804575,
+    1.2883963744802231,
+    1.3558512283799884
+   ],
+   "razon": 1.0727094414557936,
+   "razon_esperada": 1.055360996126112,
+   "coincide": true,
+   "explicacion": "Integrante 1: hoy reordena las estaciones en cada llamada (n log n). Para O(log n + k) debe ordenar una sola vez al cargar y buscar el prefijo con busqueda binaria."
+  },
+  {
+   "clave": "rango",
+   "requisito": "R3",
+   "etiqueta": "rango('CALLE 26','CALLE 80')",
+   "o": "O(n)",
+   "n": "",
+   "medido": [
+    1.2148600001182785,
+    2.020719999791254,
+    3.43449999945733,
+    6.6711199997371295
+   ],
+   "esperado": [
+    1.2148600001182785,
+    2.429720000236557,
+    4.859440000473114,
+    9.718880000946228
+   ],
+   "razon": 1.7684540104178552,
+   "razon_esperada": 2.0,
+   "coincide": true,
+   "explicacion": "CONFIRMAR con Integrante 1. Es O(log n + m); al duplicar la red las copias 'CALLE 3X X2' caen dentro del rango, asi que m tambien se duplica."
+  },
+  {
+   "clave": "proximo_bus",
+   "requisito": "R4",
+   "etiqueta": "proximo_bus(est, ruta, hora)",
+   "o": "O(log n)",
+   "n": "",
+   "medido": [
+    2.9199566667633308,
+    3.143180000127662,
+    3.373633333202027,
+    4.000266666632038
+   ],
+   "esperado": [
+    2.9199566667633308,
+    3.0907130838417873,
+    3.261469500920244,
+    3.4322259179987
+   ],
+   "razon": 1.1118367870258516,
+   "razon_esperada": 1.055360996126112,
+   "coincide": true,
+   "explicacion": "Dos busquedas binarias: clave ruta-estacion (log G) y hora (log H)."
+  },
+  {
+   "clave": "ranking",
+   "requisito": "R6",
+   "etiqueta": "ranking(10)",
+   "o": "O(1)",
+   "n": "",
+   "medido": [
+    1.3513466666381646,
+    1.346966666725772,
+    1.3481400001561874,
+    1.4128866666851536
+   ],
+   "esperado": [
+    1.3513466666381646,
+    1.3513466666381646,
+    1.3513466666381646,
+    1.3513466666381646
+   ],
+   "razon": 1.0152188485878793,
+   "razon_esperada": 1.0,
+   "coincide": true,
+   "explicacion": "Precalculado: con cache valida solo copia k=10 elementos -> O(k)."
+  },
+  {
+   "clave": "ranking_cierre",
+   "requisito": "R6",
+   "etiqueta": "cerrar + ranking(10) + reabrir",
+   "o": "O(n)",
+   "n": "",
+   "medido": [
+    5995.260000000258,
+    13277.534099999855,
+    28408.027049999873,
+    67008.51892500026
+   ],
+   "esperado": [
+    5995.260000000258,
+    11990.520000000515,
+    23981.04000000103,
+    47962.08000000206
+   ],
+   "razon": 2.23767202862715,
+   "razon_esperada": 2.0,
+   "coincide": true,
+   "explicacion": "Cerrar invalida el nivel 2 de la cache: se refiltra la lista de S estaciones."
+  },
+  {
+   "clave": "editar",
+   "requisito": "R7",
+   "etiqueta": "agregar_parada + quitar_parada",
+   "o": "O(n)",
+   "n": "",
+   "medido": [
+    4.80920000001106,
+    6.2388000003466,
+    9.540249999417938,
+    15.630650000275637
+   ],
+   "esperado": [
+    4.80920000001106,
+    9.61840000002212,
+    19.23680000004424,
+    38.47360000008848
+   ],
+   "razon": 1.4882779495138123,
+   "razon_esperada": 2.0,
+   "coincide": true,
+   "explicacion": "Segun INTEGRANTE_4_R7_R9.md: O(R + n + E) -> busqueda lineal de la ruta (R rutas) y verificacion lineal de que la estacion existe (E estaciones). Al duplicar la red se duplican R y E. Mejora posible: indice ordenado de estaciones (busqueda binaria)."
+  },
+  {
+   "clave": "cerrar",
+   "requisito": "R8",
+   "etiqueta": "cerrar + reabrir",
+   "o": "O(n)",
+   "n": "",
+   "medido": [
+    3.3692249999717205,
+    4.803150000043388,
+    7.888049999849045,
+    14.233099999216847
+   ],
+   "esperado": [
+    3.3692249999717205,
+    6.738449999943441,
+    13.476899999886882,
+    26.953799999773764
+   ],
+   "razon": 1.624082856452014,
+   "razon_esperada": 2.0,
+   "coincide": true,
+   "explicacion": "Segun INTEGRANTE_4_R7_R9.md: O(E + c) -> _existe_estacion recorre las E estaciones."
+  },
+  {
+   "clave": "deshacer",
+   "requisito": "R9",
+   "etiqueta": "cerrar + deshacer",
+   "o": "O(n)",
+   "n": "",
+   "medido": [
+    2.0223500001748107,
+    2.708224999992126,
+    4.316350000976854,
+    7.459574999302276
+   ],
+   "esperado": [
+    2.0223500001748107,
+    4.044700000349621,
+    8.089400000699243,
+    16.178800001398486
+   ],
+   "razon": 1.5537180537710047,
+   "razon_esperada": 2.0,
+   "coincide": true,
+   "explicacion": "Apilar/desapilar es O(1); lo que crece es el cerrar que se mide junto (O(E))."
+  },
+  {
+   "clave": "fila",
+   "requisito": "R10",
+   "etiqueta": "simular_fila(llegadas, 60, 2)",
+   "o": "O(n log n)",
+   "n": "",
+   "medido": [
+    38686.57800001074,
+    88854.98199998664,
+    222216.77099997806,
+    500941.4400000196
+   ],
+   "esperado": [
+    38686.57800001074,
+    81897.8679750321,
+    172845.15990008548,
+    363789.1677002134
+   ],
+   "razon": 2.350658456094342,
+   "razon_esperada": 2.110721992252224,
+   "coincide": true,
+   "explicacion": "CONFIRMAR con Integrante 1. n = numero de llegadas; hay que ordenarlas (n log n) y luego una cola O(n)."
+  }
+ ]
+}

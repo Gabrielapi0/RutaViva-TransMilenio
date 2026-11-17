@@ -294,8 +294,8 @@ async function simularFila(e) {
   $("#fila-stats").innerHTML = [
     [f1(r.buses), "buses despachados"], [f1(r.atendidos), "pasajeros que subieron"],
     [f1(r.espera_promedio) + " min", "espera promedio"], [f1(r.cola_max), "personas en fila (máx.)"],
-    [f1(r.en_espera), `siguen esperando a las ${r.fin}`], [r.llenos == null ? "—" : f1(r.llenos), "buses que salieron llenos"],
-    [`${r.inicio}–${r.fin}`, "ventana simulada"], [r.ms_motor + " ms", `motor con ${f1(r.pasajeros)} pasajeros`],
+    [r.fin, "sube el último pasajero"], [r.llenos == null ? "—" : f1(r.llenos), "buses que salieron llenos"],
+    [`${r.inicio}–${r.fin}`, "de la primera a la última salida"], [r.ms_motor + " ms", `motor con ${f1(r.pasajeros)} pasajeros`],
   ].map(([b, s]) => `<div class="stat"><b>${b}</b><span>${s}</span></div>`).join("");
   graficaFila(r);
   animarAnden(r);
