@@ -23,7 +23,6 @@ from urllib.parse import parse_qs, urlparse
 RAIZ = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(RAIZ))
 from motor import Red, simular_fila  # noqa: E402
-from motor.viajes import IndiceViajes, detalle_recorrido  # noqa: E402
 
 WEB = RAIZ / "web"
 CANDADO = threading.Lock()
@@ -47,10 +46,12 @@ def norm(t):
 
 # ------------------------------------------------------- adaptadores del motor
 def estado_de(nombre):
-    """R1 del equipo devuelve ('OPERATIVA'|'CERRADA'|'NO EXISTE', rutas)."""
+    """R1 devuelve "ABIERTA", "CERRADA" o "NO EXISTE". Las rutas de la estación
+    salen de red.rutas_de (extra del motor, misma tabla hash de R1)."""
     res = RED.estado(nombre)
-    texto, rutas = (res[0], res[1]) if isinstance(res, (list, tuple)) else (res, [])
-    est = {"OPERATIVA": "abierta", "ABIERTA": "abierta", "CERRADA": "cerrada"}.get(str(texto).upper())
+    texto = res[0] if isinstance(res, (list, tuple)) else res
+    est = {"ABIERTA": "abierta", "OPERATIVA": "abierta", "CERRADA": "cerrada"}.get(str(texto).upper())
+    rutas = RED.rutas_de(nombre) if est and hasattr(RED, "rutas_de") else []
     return est, list(rutas or [])
 
 
@@ -115,29 +116,31 @@ def api_estado(q):
 
 
 def api_viaje(q):
+    """R5 devuelve [(ruta, sube_en, baja_en), ...], [] si origen == destino,
+    o None si no hay viaje. Aquí solo se agregan las estaciones de cada tramo
+    (desde recorrido, R7) y las horas (R4) para dibujar el itinerario."""
     o, d = norm(q.get("origen")), norm(q.get("destino"))
     hora = q.get("hora") or "07:00"
-    res = RED.viaje(o, d)
+    tramos = RED.viaje(o, d)
     eo, ed = estado_de(o)[0], estado_de(d)[0]
-    if res is None or (isinstance(res, list) and res and res[0] == "ERROR"):
+    if tramos is None:
         motivo = "no_existe" if eo is None or ed is None else "cerrada" if "cerrada" in (eo, ed) else "sin_ruta"
         return {"ok": False, "motivo": motivo, "estado_origen": eo, "estado_destino": ed}
-    if res[0] == "MISMO DESTINO":
-        return {"ok": True, "tramos": [], "hora": hora, "total_paradas": 0}
-    indice = IndiceViajes(RED.rutas, RED.estaciones)
-    detalle = detalle_recorrido(RED.rutas, indice, res, o, d, RED.cerradas)
-    salida, t = [], hora
-    for ruta, estaciones in detalle:
-        sube, baja = estaciones[0], estaciones[-1]
+    salida, t, total = [], hora, 0
+    for ruta, sube, baja in tramos:
+        rec = paradas_de(ruta)
+        i, j = rec.index(sube), rec.index(baja)
+        estaciones = rec[i:j + 1]
         bus = RED.proximo_bus(sube, ruta, t)
         llegada = RED.proximo_bus(baja, ruta, bus) if bus else None
         salida.append({"ruta": ruta, "sube": sube, "baja": baja, "paradas": len(estaciones) - 1,
                        "estaciones": [{"nombre": e, "estado": estado_de(e)[0]} for e in estaciones],
                        "bus": bus, "llegada": llegada,
                        "manana": bool(bus) and minutos(bus) < minutos(t)})
+        total += len(estaciones) - 1
         if llegada:
             t = llegada
-    return {"ok": True, "tramos": salida, "hora": hora, "total_paradas": res[4], "tipo": res[0]}
+    return {"ok": True, "tramos": salida, "hora": hora, "total_paradas": total}
 
 
 def api_pantalla(q):

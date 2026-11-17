@@ -61,15 +61,20 @@ class Red(OperarRed):
         return self._orden_est
 
     def estado(self, nombre):
-        """R1: Estado de la estación ('OPERATIVA', 'CERRADA', 'NO EXISTE') y sus rutas.
+        """R1: "ABIERTA", "CERRADA" o "NO EXISTE".
         O(1) esperado (tabla hash) + O(c) por revisar las cerradas."""
         nombre_norm = nombre.strip().upper()
-        rutas_est = self._indice_estaciones().obtener(nombre_norm)
-        if rutas_est is None:
-            return "NO EXISTE", []
-        est_cerrada = buscar_pertenencia(self.cerradas, nombre_norm)
-        estado_str = "CERRADA" if est_cerrada else "OPERATIVA"
-        return estado_str, list(rutas_est)
+        if self._indice_estaciones().obtener(nombre_norm) is None:
+            return "NO EXISTE"
+        if buscar_pertenencia(self.cerradas, nombre_norm):
+            return "CERRADA"
+        return "ABIERTA"
+
+    def rutas_de(self, nombre):
+        """Extra para la app (no es del contrato): rutas que paran en la estación.
+        Usa la misma tabla hash de R1: O(1) esperado + O(r) por copiar la lista."""
+        rutas_est = self._indice_estaciones().obtener(nombre.strip().upper())
+        return [] if rutas_est is None else list(rutas_est)
 
     def autocompletar(self, prefijo, k):
         """R2: Devuelve hasta k estaciones ABIERTAS que inician por prefijo en orden alfabético.

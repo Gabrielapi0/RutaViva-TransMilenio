@@ -61,6 +61,7 @@ Convenciones: **S** = estaciones, **R** = rutas, **P** = total de paradas de tod
 | R2 `autocompletar` | **Arreglo ordenado** de estaciones, ordenado **una sola vez** al cargar con merge sort propio (O(S log S)). **Búsqueda binaria** (`limite_inferior`) del primer nombre ≥ prefijo y avance mientras empiece por el prefijo, saltando las cerradas. | **O(log S + k)** (× c por revisar cierres) |
 | R3 `rango` | El mismo arreglo ordenado: búsqueda binaria de `desde` y avance hasta pasar `hasta`, saltando las cerradas. | **O(log S + m)**, m = estaciones en el rango |
 
+- **Devuelve:** `estado(nombre)` → `"ABIERTA"`, `"CERRADA"` o `"NO EXISTE"`. `autocompletar` y `rango` → lista de nombres. (Las rutas de una estación, que usa la app, salen de `red.rutas_de(nombre)`, un extra fuera del contrato).
 - **Por qué:** R1 solo pregunta por un nombre exacto, así que la tabla hash da O(1) sin pagar un orden que no usa. R2 y R3 necesitan orden alfabético: en un arreglo ordenado, todos los nombres con un mismo prefijo o dentro de un rango quedan seguidos, y la búsqueda binaria encuentra el inicio en log S. Las estaciones no cambian durante la ejecución, así que basta con ordenar una vez.
 - **Alternativas descartadas:**
   - Recorrer la lista en cada consulta: O(S) en R1 y R3. Era la primera versión, y el panel mostraba que el tiempo se duplicaba al duplicar la red.
@@ -99,6 +100,8 @@ Convenciones: **S** = estaciones, **R** = rutas, **P** = total de paradas de tod
 | Parada agregada con R7 | `None`: no tiene horarios propios y no se inventan |
 
 ### R5 · `viaje(origen, destino)` (Integrante 3) — `motor/viajes.py`
+
+- **Devuelve:** lista de tramos `(ruta, sube_en, baja_en)`. Directo: `[("8-3", "PORTAL NORTE", "TOBERIN")]`; con transbordo: `[("1-1", "UNIVERSIDADES", "RECINTO FERIAL"), ("K43-2", "RECINTO FERIAL", "PORTAL ELDORADO")]`. `None` si no hay viaje o si el origen o el destino no existe o está cerrado; `[]` si origen y destino son la misma estación. La conversión del resultado interno a tramos está en `motor/integracion_r5.py`.
 
 Viaje directo o con un transbordo que recorre menos paradas, respetando el sentido de las rutas y evitando las estaciones cerradas. Usa:
 - merge sort propio para ordenar los registros (O(n log n));
