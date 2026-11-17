@@ -173,8 +173,9 @@ python Front/panel_rendimiento.py
 - **Explicación de desviaciones:**
   - R4 (pendiente ≈ 0,1) y `ranking` (≈ 0) son planas, como deben ser O(log n) y O(k).
   - `cerrar + ranking + reabrir` sale lineal (≈ 1,1) porque mide también el recálculo del ranking después del cambio.
-  - R7, R8 y R9 salen por debajo de 1 aunque son lineales en S: el recorrido lineal es barato frente al costo fijo de cada operación, y esa parte fija pesa más en las redes pequeñas.
-  - R1 y R2 crecen lineal aunque se esperaba O(log n). Ver la nota de R1–R3.
+  - R1 y R2 salen planos (×1,10 y ×1,11 al duplicar), como O(1) y O(log n + k). R3 crece con la red porque las copias caen dentro del rango, así que m (la respuesta) también se duplica.
+  - R7, R8 y R9 salen planos (≈ ×1,0): la ruta y la estación se ubican con tablas hash, y dentro de una ruta el costo depende de sus paradas, que no crecen al duplicar la red.
+  - R10 crece un poco más que lineal (×2,37 frente a ×2,11 esperado) por el merge sort de las llegadas, O(p log p).
 
 
 ## Conversión GTFS

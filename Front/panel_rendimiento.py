@@ -69,31 +69,28 @@ def _crece(o, f, n_base):
 OPERACIONES = [
     ["carga",   "Carga", "Red(carpeta)", "n log n",
      "Lee los 3 CSV y ordena ~E eventos de horarios con merge sort propio."],
-    ["estado",  "R1", "estado(nombre)", "log n",
-     "Integrante 1: hoy recorre todas las estaciones y todas las rutas (lineal). "
-     "Para O(log n) debe usar busqueda binaria sobre las estaciones ordenadas al cargar."],
+    ["estado",  "R1", "estado(nombre)", "1",
+     "Tabla hash propia (nombre -> rutas): O(1) esperado, mas O(c) para revisar las cerradas."],
     ["autocompletar", "R2", "autocompletar('CAL', 5)", "log n",
-     "Integrante 1: hoy reordena las estaciones en cada llamada (n log n). Para "
-     "O(log n + k) debe ordenar una sola vez al cargar y buscar el prefijo con busqueda binaria."],
+     "Arreglo ordenado una sola vez al cargar y busqueda binaria del prefijo: O(log n + k)."],
     ["rango",   "R3", "rango('CALLE 26','CALLE 80')", "n",
-     "CONFIRMAR con Integrante 1. Es O(log n + m); al duplicar la red las copias "
-     "'CALLE 3X X2' caen dentro del rango, asi que m tambien se duplica."],
+     "Busqueda binaria de 'desde' y recorrido hasta 'hasta': O(log n + m). Al duplicar la red "
+     "las copias 'CALLE 3X ~2' caen dentro del rango, asi que m (la respuesta) tambien se duplica."],
     ["proximo_bus", "R4", "proximo_bus(est, ruta, hora)", "log n",
      "Dos busquedas binarias: clave ruta-estacion (log G) y hora (log H)."],
     ["ranking", "R6", "ranking(10)", "1",
      "Precalculado: con cache valida solo copia k=10 elementos -> O(k)."],
     ["ranking_cierre", "R6", "cerrar + ranking(10) + reabrir", "n",
      "Cerrar invalida el nivel 2 de la cache: se refiltra la lista de S estaciones."],
-    ["editar",  "R7", "agregar_parada + quitar_parada", "n",
-     "Segun INTEGRANTE_4_R7_R9.md: O(R + n + E) -> busqueda lineal de la ruta (R rutas) "
-     "y verificacion lineal de que la estacion existe (E estaciones). Al duplicar la red "
-     "se duplican R y E. Mejora posible: indice ordenado de estaciones (busqueda binaria)."],
-    ["cerrar",  "R8", "cerrar + reabrir", "n",
-     "Segun INTEGRANTE_4_R7_R9.md: O(E + c) -> _existe_estacion recorre las E estaciones."],
-    ["deshacer", "R9", "cerrar + deshacer", "n",
-     "Apilar/desapilar es O(1); lo que crece es el cerrar que se mide junto (O(E))."],
+    ["editar",  "R7", "agregar_parada + quitar_parada", "1",
+     "La ruta se ubica con tabla hash (O(1)) y la estacion se valida con otra tabla hash (O(1)). "
+     "Insertar o quitar dentro de la ruta es O(n) con n = paradas de esa ruta, que no crece al duplicar la red."],
+    ["cerrar",  "R8", "cerrar + reabrir", "1",
+     "La estacion se valida con tabla hash (O(1)); la lista de cerradas cuesta O(c), con c pequeno."],
+    ["deshacer", "R9", "cerrar + deshacer", "1",
+     "Apilar y desapilar son O(1), mas el cierre que se aplica y se revierte (O(1) + O(c))."],
     ["fila",    "R10", "simular_fila(llegadas, 60, 2)", "n log n",
-     "CONFIRMAR con Integrante 1. n = numero de llegadas; hay que ordenarlas (n log n) y luego una cola O(n)."],
+     "n = numero de llegadas: se ordenan con merge sort estable (n log n) y luego una cola FIFO (n)."],
 ]
 
 
