@@ -6,7 +6,7 @@ Proyecto: Planeador de recorridos de TransMilenio — RutaViva
 
 ## Integrante 1
 
-Nombre: PENDIENTE
+Nombre: JUAN JOSE ROBLES
 
 Responsabilidades:
 - Carga de datos y clase Red.
@@ -17,7 +17,7 @@ Responsabilidades:
 
 ## Integrante 2
 
-Nombre: PENDIENTE
+Nombre: GABRIELA SALAZAR
 
 Responsabilidades:
 - R4: Próximo bus.
@@ -37,7 +37,7 @@ Responsabilidades:
 
 ## Integrante 4
 
-Nombre: PENDIENTE
+Nombre: PAULA PLAZAS
 
 Responsabilidades:
 - R7: Modificación de recorridos.

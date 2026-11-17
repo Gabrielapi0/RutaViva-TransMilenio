@@ -41,7 +41,7 @@ RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if RAIZ not in sys.path:
     sys.path.insert(0, RAIZ)
 
-FACTORES = [1, 2, 4]
+FACTORES = [1, 2, 4, 8]   # 4 tamanos, como el script del profesor (10k, 20k, 40k, 80k)
 LOTES = 5          # se toma el mejor de 5 lotes
 LLAMADAS = 300     # llamadas por lote
 
@@ -70,9 +70,11 @@ OPERACIONES = [
     ["carga",   "Carga", "Red(carpeta)", "n log n",
      "Lee los 3 CSV y ordena ~E eventos de horarios con merge sort propio."],
     ["estado",  "R1", "estado(nombre)", "log n",
-     "CONFIRMAR con Integrante 1."],
+     "Integrante 1: hoy recorre todas las estaciones y todas las rutas (lineal). "
+     "Para O(log n) debe usar busqueda binaria sobre las estaciones ordenadas al cargar."],
     ["autocompletar", "R2", "autocompletar('CAL', 5)", "log n",
-     "CONFIRMAR con Integrante 1 (log n + k, k fijo)."],
+     "Integrante 1: hoy reordena las estaciones en cada llamada (n log n). Para "
+     "O(log n + k) debe ordenar una sola vez al cargar y buscar el prefijo con busqueda binaria."],
     ["rango",   "R3", "rango('CALLE 26','CALLE 80')", "n",
      "CONFIRMAR con Integrante 1. Es O(log n + m); al duplicar la red las copias "
      "'CALLE 3X X2' caen dentro del rango, asi que m tambien se duplica."],
@@ -82,15 +84,16 @@ OPERACIONES = [
      "Precalculado: con cache valida solo copia k=10 elementos -> O(k)."],
     ["ranking_cierre", "R6", "cerrar + ranking(10) + reabrir", "n",
      "Cerrar invalida el nivel 2 de la cache: se refiltra la lista de S estaciones."],
-    ["editar",  "R7", "agregar_parada + quitar_parada", "1",
-     "CONFIRMAR con Integrante 4. Duplicar la red duplica la CANTIDAD de rutas, "
-     "no su longitud; si la ruta se ubica en O(log R) o O(1) no deberia crecer."],
-    ["cerrar",  "R8", "cerrar + reabrir", "log n",
-     "CONFIRMAR con Integrante 4."],
-    ["deshacer", "R9", "cerrar + deshacer", "1",
-     "CONFIRMAR con Integrante 4 (pila: O(1) + costo de la operacion)."],
-    ["fila",    "R10", "simular_fila(llegadas, 5, 100)", "n",
-     "CONFIRMAR con Integrante 1. n = numero de llegadas."],
+    ["editar",  "R7", "agregar_parada + quitar_parada", "n",
+     "Segun INTEGRANTE_4_R7_R9.md: O(R + n + E) -> busqueda lineal de la ruta (R rutas) "
+     "y verificacion lineal de que la estacion existe (E estaciones). Al duplicar la red "
+     "se duplican R y E. Mejora posible: indice ordenado de estaciones (busqueda binaria)."],
+    ["cerrar",  "R8", "cerrar + reabrir", "n",
+     "Segun INTEGRANTE_4_R7_R9.md: O(E + c) -> _existe_estacion recorre las E estaciones."],
+    ["deshacer", "R9", "cerrar + deshacer", "n",
+     "Apilar/desapilar es O(1); lo que crece es el cerrar que se mide junto (O(E))."],
+    ["fila",    "R10", "simular_fila(llegadas, 60, 2)", "n log n",
+     "CONFIRMAR con Integrante 1. n = numero de llegadas; hay que ordenarlas (n log n) y luego una cola O(n)."],
 ]
 
 
@@ -206,12 +209,32 @@ def medir_red(Red, simular_fila, carpeta, factor):
              llamadas=40)
     intentar("deshacer", lambda i: (red.cerrar(estaciones[i]), red.deshacer()), llamadas=40)
 
-    # R10: formato de Integrante 1 -> llegadas[minuto] = personas que llegan ese minuto.
-    # n = minutos simulados (20.000 por factor, ~300.000 pasajeros por factor).
-    rnd = random.Random(11)
-    llegadas = [rnd.randrange(0, 31) for _ in range(20000 * factor)]
-    intentar("fila", lambda i: simular_fila(llegadas, 5, 100), llamadas=1, lotes=3)
+    # R10: formato del enunciado -> llegadas = segundos de llegada de cada persona.
+    # Solo se mide si cumple el ejemplo del contrato (si no, podria colgarse).
+    try:
+        cumple = simular_fila([30, 5, 5, 70], 60, 2) == [120, 60, 60, 120]
+    except Exception as e:
+        cumple = False
+    if cumple:
+        rnd = random.Random(11)
+        llegadas = [rnd.randrange(0, 86400) for _ in range(20000 * factor)]
+        intentar("fila", lambda i: simular_fila(llegadas, 60, 2), llamadas=1, lotes=3)
+    else:
+        res["fila"] = None
+        res["fila_error"] = "no cumple el ejemplo del enunciado [120, 60, 60, 120]"
     return res
+
+
+def _pendiente(xs, ys):
+    """Pendiente de minimos cuadrados de log(y) contra log(x)."""
+    pts = [(math.log(x), math.log(y)) for x, y in zip(xs, ys) if y]
+    if len(pts) < 2:
+        return None
+    mx = sum(p[0] for p in pts) / len(pts)
+    my = sum(p[1] for p in pts) / len(pts)
+    num = sum((p[0] - mx) * (p[1] - my) for p in pts)
+    den = sum((p[0] - mx) ** 2 for p in pts)
+    return num / den if den else None
 
 
 def correr_panel(carpeta_base="Datos", factores=FACTORES):
@@ -245,10 +268,12 @@ def correr_panel(carpeta_base="Datos", factores=FACTORES):
                 fila["tiempos"].append(t)
                 fila["razones"].append(t / base if t else None)
                 fila["esperadas"].append(_crece(o, f, n_ref))
-            ultima, esperada = fila["razones"][-1], fila["esperadas"][-1]
-            if ultima is None:
+            # Pendiente en escala log-log (metodo del profesor): 0 = constante, 1 = lineal.
+            fila["pendiente"] = _pendiente(factores, fila["tiempos"])
+            fila["pendiente_esperada"] = _pendiente(factores, fila["esperadas"])
+            if fila["pendiente"] is None:
                 fila["veredicto"] = "pendiente"
-            elif ultima <= esperada * 1.5 + 0.3:
+            elif fila["pendiente"] <= fila["pendiente_esperada"] + 0.3:
                 fila["veredicto"] = "coincide"
             else:
                 fila["veredicto"] = "crece mas de lo esperado"
@@ -266,7 +291,7 @@ def graficar(resultados):
     import matplotlib.pyplot as plt
 
     factores = resultados["factores"]
-    filas = [f for f in resultados["filas"] if f["razones"]]
+    filas = [f for f in resultados["filas"] if f["razones"] and f.get("pendiente") is not None]
     columnas = 4
     renglones = max(1, math.ceil(len(filas) / columnas))
     fig, ejes = plt.subplots(renglones, columnas, figsize=(4 * columnas, 3.2 * renglones),
@@ -288,7 +313,9 @@ def graficar(resultados):
         ax.grid(alpha=0.3)
         ax.legend(fontsize=7, loc="upper left", frameon=True, framealpha=0.9)
         color = "#1a7f37" if fila["veredicto"] == "coincide" else "#cf222e"
-        ax.text(0.98, 0.04, fila["veredicto"], transform=ax.transAxes, ha="right",
+        ax.text(0.98, 0.04, "pendiente %.2f (esp. %.2f) - %s" % (
+                    fila["pendiente"], fila["pendiente_esperada"], fila["veredicto"]),
+                transform=ax.transAxes, ha="right",
                 fontsize=8, color=color)
     for j in range(len(filas), renglones * columnas):
         ejes[j // columnas][j % columnas].axis("off")
@@ -301,18 +328,18 @@ def graficar(resultados):
 def tabla_texto(resultados):
     lineas = []
     fs = resultados["factores"]
-    lineas.append("%-4s %-34s %-11s %s   %s" % (
+    lineas.append("%-4s %-34s %-11s %s  %-9s %-9s %s" % (
         "Req", "Operacion", "O esperada",
-        "  ".join("t(%dn)/t(n)" % f for f in fs[1:]), "Veredicto"))
+        "  ".join("t(%dn)/t(n)" % f for f in fs[1:]), "pendiente", "esperada", "Veredicto"))
     for f in resultados["filas"]:
-        if f["razones"]:
+        if f["razones"] and f.get("pendiente") is not None:
             rz = "  ".join(("%10.2f" % r) if r else "         -" for r in f["razones"][1:])
-            esp = "  (esp. " + " / ".join("%.2f" % e for e in f["esperadas"][1:]) + ")"
+            lineas.append("%-4s %-34s %-11s %s  %9.2f %9.2f %s" % (
+                f["requisito"], f["operacion"], f["O"], rz, f["pendiente"],
+                f["pendiente_esperada"], f["veredicto"]))
         else:
-            rz, esp = "pendiente: " + f["error"], ""
-        lineas.append("%-4s %-34s %-11s %s%s   %s" % (
-            f["requisito"], f["operacion"], f["O"], rz, esp,
-            f["veredicto"] if f["razones"] else ""))
+            lineas.append("%-4s %-34s %-11s pendiente: %s" % (
+                f["requisito"], f["operacion"], f["O"], f["error"]))
     return "\n".join(lineas)
 
 

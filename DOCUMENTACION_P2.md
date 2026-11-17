@@ -1,5 +1,7 @@
 # Documentación técnica — Integrante 2 (R4, R6, R11)
 
+> Versión resumida y vigente en el README, sección **Decisiones técnicas por requisito (R12)**. Actualizado al contrato oficial: R4 devuelve `None` después del último bus y R6 devuelve tuplas `(nombre, buses_por_dia)`.
+
 Este texto va en el README final (R12), en las secciones R4 y R6.
 
 ---
@@ -35,14 +37,14 @@ Una consulta hace **dos búsquedas binarias**: primero ubica la pareja en `clave
 | Caso | Decisión |
 |---|---|
 | La hora coincide con un bus | **Cuenta**: el bus está en la estación ese minuto. `"09:57"` → `"09:57"` |
-| Después del último bus del día | **Se pasa al día siguiente** y se devuelve el primer bus, porque el servicio se repite a diario. Se cambia con `ENVOLVER_AL_DIA_SIGUIENTE = False` (en ese caso devuelve `None`). |
+| Después del último bus del día | `None` (contrato oficial: "o None si no hay más ese día"). |
 | Horas del GTFS ≥ 24:00 | Módulo 24: `25:10` → `01:10` (madrugada del día siguiente). |
 | Ruta inexistente / estación inexistente / estación que no está en la ruta / ruta sin horarios / hora inválida / estación cerrada | `None`. `consultar()` devuelve también el motivo para mostrarlo en el front. |
 | Parada quitada con R7 | `None`: ya no está en `self.rutas`. Si se deshace (R9), vuelve a responder. |
 | Parada agregada con R7 | `None` (sin horarios): no se inventan horas. |
 | Buses repetidos en el mismo minuto | Se conservan (son buses distintos del GTFS). |
 
-**Ejemplo real:** `proximo_bus("UNIVERSIDADES", "1-1", "10:00")` → `"10:08"`; con `"23:30"` → `"09:57"` (primer bus del día siguiente).
+**Ejemplo real:** `proximo_bus("UNIVERSIDADES", "1-1", "10:00")` → `"10:08"`; con `"23:30"` → `None`.
 
 ---
 
@@ -50,7 +52,7 @@ Una consulta hace **dos búsquedas binarias**: primero ubica la pareja en `clave
 
 **Archivo:** `motor/ranking.py` (clase `IndiceRanking`)
 
-**Entrada:** k (int). **Salida:** lista con los nombres de las k estaciones abiertas con más buses al día.
+**Entrada:** k (int). **Salida:** lista de tuplas `(nombre, buses_por_dia)` de las k estaciones abiertas con más buses, de mayor a menor.
 
 ### Qué se cuenta
 Buses al día de una estación = suma, sobre las rutas que hoy paran en ella según `self.rutas`, de los eventos de horario de esa ruta en esa estación. Con los datos reales, RICAURTE tiene 4.446.

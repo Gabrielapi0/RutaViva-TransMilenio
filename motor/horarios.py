@@ -24,9 +24,9 @@ Decisiones de casos borde (documentadas en DOCUMENTACION_P2.md)
 ---------------------------------------------------------------
 1. Si la hora consultada coincide con un bus, ESE bus cuenta (el bus esta en
    la estacion en ese minuto): proximo_bus(..., "09:57") -> "09:57".
-2. Si la hora es posterior al ultimo bus del dia, se envuelve al dia siguiente
-   y se devuelve el primer bus del dia (el servicio se repite a diario).
-   Se controla con ENVOLVER_AL_DIA_SIGUIENTE.
+2. Si la hora es posterior al ultimo bus del dia se devuelve None
+   ("None si no hay mas ese dia", contrato del enunciado). No se envuelve
+   al dia siguiente; ENVOLVER_AL_DIA_SIGUIENTE queda en False.
 3. Ruta inexistente, estacion inexistente, estacion que no pertenece a la ruta,
    ruta sin horarios, hora mal escrita o estacion cerrada -> None.
    El metodo consultar() devuelve ademas el motivo, para que el front lo muestre.
@@ -41,7 +41,7 @@ import csv
 
 SEP = "\x1f"                       # separador invisible, menor que cualquier letra
 MINUTOS_DIA = 1440
-ENVOLVER_AL_DIA_SIGUIENTE = True   # decision R4: despues del ultimo bus -> primero del dia
+ENVOLVER_AL_DIA_SIGUIENTE = False  # contrato R4: despues del ultimo bus -> None
 
 # Codigos de motivo que devuelve consultar()
 OK = "OK"

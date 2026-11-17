@@ -63,10 +63,10 @@ class TestR4(unittest.TestCase):
     def test_hora_exacta_cuenta(self):
         self.assertEqual(self.p("A", "R1", "08:00"), "08:00")
 
-    def test_despues_del_ultimo_envuelve(self):
-        self.assertEqual(self.p("A", "R1", "23:30"), "06:00")
-        self.assertEqual(self.h.consultar("A", "R1", "23:30", RUTAS, []),
-                         [OK, "06:00", True])
+    def test_despues_del_ultimo_es_none(self):
+        # Contrato: "None si no hay mas ese dia".
+        self.assertIsNone(self.p("A", "R1", "23:30"))
+        self.assertEqual(self.p("A", "R1", "22:00"), "22:00")
 
     def test_gtfs_mayor_24(self):
         self.assertEqual(self.p("C", "R2", "00:30"), "01:10")
@@ -97,7 +97,7 @@ class TestR6(unittest.TestCase):
         # C: 3 (R1) + 2 (R2) = 5.  A, B: 3.  D, E: 2.  F: 0.
         self.assertEqual(self.r.top_con_conteo(10, ESTACIONES, RUTAS, []),
                          [["C", 5], ["A", 3], ["B", 3], ["D", 2], ["E", 2], ["F", 0]])
-        self.assertEqual(self.r.top(2, ESTACIONES, RUTAS, []), ["C", "A"])
+        self.assertEqual(self.r.top(2, ESTACIONES, RUTAS, []), [("C", 5), ("A", 3)])
 
     def test_k_borde(self):
         self.assertEqual(self.r.top(0, ESTACIONES, RUTAS, []), [])
@@ -107,10 +107,10 @@ class TestR6(unittest.TestCase):
     def test_cerrar_y_reabrir(self):
         cerradas = ["C"]
         self.r.invalidar_cierres()
-        self.assertEqual(self.r.top(2, ESTACIONES, RUTAS, cerradas), ["A", "B"])
+        self.assertEqual(self.r.top(2, ESTACIONES, RUTAS, cerradas), [("A", 3), ("B", 3)])
         cerradas = []
         self.r.invalidar_cierres()
-        self.assertEqual(self.r.top(1, ESTACIONES, RUTAS, cerradas), ["C"])
+        self.assertEqual(self.r.top(1, ESTACIONES, RUTAS, cerradas), [("C", 5)])
 
     def test_r7_agregar_hereda(self):
         rutas = [["R1", [[1, "A"], [2, "B"], [3, "F"], [4, "C"]]], RUTAS[1], RUTAS[2]]
@@ -138,44 +138,59 @@ class TestIntegracion(unittest.TestCase):
     def test_ejemplo_enunciado(self):
         self.assertEqual(self.red.proximo_bus("UNIVERSIDADES", "1-1", "10:00"), "10:08")
 
-    def test_ultimo_bus_envuelve(self):
-        self.assertEqual(self.red.proximo_bus("UNIVERSIDADES", "1-1", "23:30"), "09:57")
+    def test_ultimo_bus_none(self):
+        self.assertIsNone(self.red.proximo_bus("UNIVERSIDADES", "1-1", "23:30"))
 
     def test_inexistentes(self):
         self.assertIsNone(self.red.proximo_bus("UNIVERSIDADES", "NO-EXISTE", "10:00"))
         self.assertIsNone(self.red.proximo_bus("NO EXISTE", "1-1", "10:00"))
 
-    def test_integracion_con_red(self):
-        red = self.red
-        primero = red.ranking(1)[0]
-        self.assertEqual(primero, "RICAURTE")
-        red.cerrar(primero)
-        self.assertNotEqual(red.ranking(1)[0], primero)
-        self.assertIsNone(red.proximo_bus(primero, "4-3", "10:00"))
-        red.reabrir(primero)
-        self.assertEqual(red.ranking(1)[0], primero)
+    def test_formato_ranking(self):
+        top = self.red.ranking(3)
+        self.assertEqual(len(top), 3)
+        self.assertEqual(top[0], ("RICAURTE", 4446))
+        for t in top:
+            self.assertIsInstance(t, tuple)
+        self.assertGreaterEqual(top[0][1], top[1][1])
 
-    def _ruta_tiene(self, id_ruta, estacion):
-        for ruta in self.red.rutas:
-            if ruta[0] == id_ruta:
-                for parada in ruta[1]:
-                    if parada[1] == estacion:
-                        return True
-        return False
-
-    def test_integracion_r7_r9(self):
-        red = self.red
-        # R7: quitar RICAURTE de la ruta 4-3 debe bajar su conteo.
-        antes = red._ranking.top_con_conteo(1, red.estaciones, red.rutas, red.cerradas)[0][1]
-        red.quitar_parada("4-3", "RICAURTE")
-        if self._ruta_tiene("4-3", "RICAURTE"):
-            self.skipTest("PENDIENTE: quitar_parada (R7, Integrante 4) aun no modifica self.rutas")
-        despues = red._ranking.top_con_conteo(1, red.estaciones, red.rutas, red.cerradas)
-        self.assertLess(despues[0][1] if despues[0][0] == "RICAURTE" else 0, antes)
+    def test_r8_cerrar_reabrir(self):
+        from motor import Red
+        red = Red("Datos")
+        self.assertTrue(red.cerrar("RICAURTE"))
+        self.assertNotEqual(red.ranking(1)[0][0], "RICAURTE")
         self.assertIsNone(red.proximo_bus("RICAURTE", "4-3", "10:00"))
-        red.deshacer()
+        self.assertTrue(red.reabrir("RICAURTE"))
+        self.assertEqual(red.ranking(1)[0][0], "RICAURTE")
+        self.assertEqual(red.proximo_bus("RICAURTE", "4-3", "10:00") is None, False)
+
+    def test_r7_r9_quitar_deshacer_rehacer(self):
+        from motor import Red
+        red = Red("Datos")
+        antes = red.ranking(1)[0]
+        self.assertTrue(red.quitar_parada("4-3", "RICAURTE"))
+        self.assertIsNone(red.proximo_bus("RICAURTE", "4-3", "10:00"))
+        despues = red.ranking(1)[0]
+        self.assertTrue(despues[0] != "RICAURTE" or despues[1] < antes[1])
+        self.assertTrue(red.deshacer())
         self.assertIsNotNone(red.proximo_bus("RICAURTE", "4-3", "10:00"))
-        self.assertEqual(red.ranking(1)[0], "RICAURTE")
+        self.assertEqual(red.ranking(1)[0], antes)
+        self.assertTrue(red.rehacer())
+        self.assertIsNone(red.proximo_bus("RICAURTE", "4-3", "10:00"))
+
+    def test_r7_agregar_parada(self):
+        from motor import Red
+        red = Red("Datos")
+        self.assertTrue(red.agregar_parada("1-1", "CAN", "RECINTO FERIAL"))
+        self.assertIsNone(red.proximo_bus("CAN", "1-1", "10:00"))   # sin horarios propios
+        # CAN hereda los buses de RECINTO FERIAL en la 1-1, asi que su conteo sube.
+        conteo = None
+        for nombre, buses in red.ranking(200):
+            if nombre == "CAN":
+                conteo = buses
+        self.assertTrue(red.deshacer())
+        for nombre, buses in red.ranking(200):
+            if nombre == "CAN":
+                self.assertLess(buses, conteo)
 
 
 if __name__ == "__main__":

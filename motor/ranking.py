@@ -165,8 +165,9 @@ class IndiceRanking:
         return resultado
 
     def top(self, k, estaciones, rutas, cerradas):
-        """Lo que devuelve red.ranking(k): lista de nombres."""
-        nombres = []
+        """Lo que devuelve red.ranking(k) segun el contrato:
+        lista de tuplas (nombre, buses_por_dia), de mayor a menor."""
+        resultado = []
         for par in self.top_con_conteo(k, estaciones, rutas, cerradas):
-            nombres.append(par[0])
-        return nombres
+            resultado.append((par[0], par[1]))
+        return resultado

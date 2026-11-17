@@ -1,3 +1,5 @@
+> **Ya integrado.** `Red` hereda de `OperarRed` y `_sincronizar_p2()` invalida los cachés de P2 cuando cambia `self._version`, así que R7/R8/R9 no tienen que llamar nada extra.
+
 # Integración de R4 y R6 (Integrante 2) en la clase `Red`
 
 Archivos nuevos de Integrante 2 (no modifican nada existente):
