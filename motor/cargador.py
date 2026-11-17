@@ -1,5 +1,6 @@
 import csv
-import os
+
+from .tabla_hash import TablaHash
 
 def _limpiar(texto):
     if not texto:
@@ -8,12 +9,14 @@ def _limpiar(texto):
 
 
 def cargar_estaciones(carpeta):
-    ruta_csv = os.path.join(carpeta, "estaciones.csv")
+    ruta_csv = carpeta + "/estaciones.csv"
     estaciones = []
-    if not os.path.exists(ruta_csv):
+    try:
+        f = open(ruta_csv, mode='r', encoding='utf-8')
+    except FileNotFoundError:
         return estaciones
 
-    with open(ruta_csv, mode='r', encoding='utf-8') as f:
+    with f:
         lector = csv.reader(f)
         encabezado = True
         for fila in lector:
@@ -28,12 +31,14 @@ def cargar_estaciones(carpeta):
 
 
 def cargar_rutas(carpeta):
-    ruta_csv = os.path.join(carpeta, "rutas.csv")
+    ruta_csv = carpeta + "/rutas.csv"
     rutas_raw = []
-    if not os.path.exists(ruta_csv):
+    try:
+        f = open(ruta_csv, mode='r', encoding='utf-8')
+    except FileNotFoundError:
         return []
 
-    with open(ruta_csv, mode='r', encoding='utf-8') as f:
+    with f:
         lector = csv.reader(f)
         encabezado = True
         for fila in lector:
@@ -46,18 +51,18 @@ def cargar_rutas(carpeta):
                 nombre_est = _limpiar(fila[2]).upper()
                 rutas_raw.append((id_ruta, orden, nombre_est))
 
+    # Agrupamos las filas por ruta. La ruta se ubica con la tabla hash propia
+    # (id -> [id, paradas]) en O(1) esperado, así que agrupar cuesta O(P) en total.
+    # (Antes se recorría la lista de rutas por cada fila: O(P * R), cuadrático).
     rutas_resultado = []
+    indice_rutas = TablaHash()
     for id_ruta, orden, nombre_est in rutas_raw:
-        encontrada = None
-        for r in rutas_resultado:
-            if r[0] == id_ruta:
-                encontrada = r
-                break
-
+        encontrada = indice_rutas.obtener(id_ruta)
         if encontrada is None:
-            rutas_resultado.append([id_ruta, [[orden, nombre_est]]])
-        else:
-            encontrada[1].append([orden, nombre_est])
+            encontrada = [id_ruta, []]
+            rutas_resultado.append(encontrada)
+            indice_rutas.poner(id_ruta, encontrada)
+        encontrada[1].append([orden, nombre_est])
 
     for r in rutas_resultado:
         paradas = r[1]
@@ -73,12 +78,14 @@ def cargar_rutas(carpeta):
 
 
 def cargar_horarios(carpeta):
-    ruta_csv = os.path.join(carpeta, "horarios.csv")
+    ruta_csv = carpeta + "/horarios.csv"
     horarios = []
-    if not os.path.exists(ruta_csv):
+    try:
+        f = open(ruta_csv, mode='r', encoding='utf-8')
+    except FileNotFoundError:
         return horarios
 
-    with open(ruta_csv, mode='r', encoding='utf-8') as f:
+    with f:
         lector = csv.reader(f)
         encabezado = True
         for fila in lector:

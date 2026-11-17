@@ -1,8 +1,8 @@
 """R9 - Deshacer / rehacer con el patron Comando y dos pilas.
 
 Cada comando sabe aplicarse (aplicar) y revertirse (revertir) sobre la red.
-Las pilas son listas usadas con append/pop: O(1) por operacion de pila
-(mas el costo del propio comando).
+Los comandos de rutas guardan el OBJETO ruta (no su id), asi deshacer/rehacer
+no vuelven a buscarla. Las pilas son listas con append/pop: O(1) por pila.
 """
 from . import edicion_rutas as er
 from . import cierres as ci
@@ -22,41 +22,39 @@ class CmdCerrar:
 class CmdReabrir:
     def __init__(self, nombre):
         self.nombre = nombre
-        self.pos = -1
 
     def aplicar(self, red):
-        self.pos = ci.aplicar_reabrir(red.cerradas, self.nombre)
+        ci.aplicar_reabrir(red.cerradas, self.nombre)
 
     def revertir(self, red):
-        ci.revertir_reabrir(red.cerradas, self.nombre, self.pos)
+        ci.revertir_reabrir(red.cerradas, self.nombre)
 
 
 class CmdAgregarParada:
     def __init__(self, ruta, nueva, despues_de):
-        self.ruta = ruta
+        self.ruta = ruta            # objeto [id, paradas]
         self.nueva = nueva
         self.despues_de = despues_de
         self.pos = -1
 
     def aplicar(self, red):
-        self.pos = er.aplicar_agregar(red.rutas, self.ruta, self.nueva,
-                                      self.despues_de)
+        self.pos = er.aplicar_agregar(self.ruta[1], self.nueva, self.despues_de)
 
     def revertir(self, red):
-        er.revertir_agregar(red.rutas, self.ruta, self.pos)
+        er.revertir_agregar(self.ruta[1], self.pos)
 
 
 class CmdQuitarParada:
     def __init__(self, ruta, estacion):
-        self.ruta = ruta
+        self.ruta = ruta            # objeto [id, paradas]
         self.estacion = estacion
         self.pos = -1
 
     def aplicar(self, red):
-        self.pos = er.aplicar_quitar(red.rutas, self.ruta, self.estacion)
+        self.pos = er.aplicar_quitar(self.ruta[1], self.estacion)
 
     def revertir(self, red):
-        er.revertir_quitar(red.rutas, self.ruta, self.estacion, self.pos)
+        er.revertir_quitar(self.ruta[1], self.estacion, self.pos)
 
 
 class Historial:

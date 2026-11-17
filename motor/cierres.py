@@ -1,43 +1,34 @@
 """R8 - Estado compartido de estaciones cerradas.
 
-`cerradas` es la lista de nombres (contrato). Los demas requisitos
-(R1, R2, R3, R4, R5, R6) deben preguntar con `abierta(cerradas, nombre)`
-o con el metodo Red._abierta(nombre).
+`cerradas` es la lista de nombres (contrato) y se mantiene ORDENADA
+alfabeticamente: consultar es busqueda binaria, O(log c). Nadie debe agregar
+o quitar elementos por fuera de Red.cerrar / Red.reabrir.
+
+Los demas requisitos (R1-R6) deben preguntar con Red._abierta(nombre).
 """
+from ._comun import limite_inferior, buscar_binario
 
 
 def abierta(cerradas, nombre):
-    """True si `nombre` NO esta en la lista de cerradas. O(c)."""
-    for c in cerradas:
-        if c == nombre:
-            return False
-    return True
-
-
-def posicion_cerrada(cerradas, nombre):
-    """Indice de `nombre` en cerradas, o -1."""
-    for i in range(len(cerradas)):
-        if cerradas[i] == nombre:
-            return i
-    return -1
+    """True si `nombre` NO esta en cerradas. O(log c)."""
+    return buscar_binario(cerradas, nombre) == -1
 
 
 def aplicar_cerrar(cerradas, nombre):
-    cerradas.append(nombre)
+    """Inserta `nombre` en su sitio ordenado. O(log c) + desplazamiento."""
+    pos = limite_inferior(cerradas, nombre)
+    if pos < len(cerradas) and cerradas[pos] == nombre:
+        return
+    cerradas.insert(pos, nombre)
 
 
-def revertir_cerrar(cerradas, nombre):
-    pos = posicion_cerrada(cerradas, nombre)
+def aplicar_reabrir(cerradas, nombre):
+    """Quita `nombre` de cerradas si esta."""
+    pos = buscar_binario(cerradas, nombre)
     if pos != -1:
         cerradas.pop(pos)
 
 
-def aplicar_reabrir(cerradas, nombre):
-    """Quita `nombre` de cerradas. Devuelve la posicion que tenia."""
-    pos = posicion_cerrada(cerradas, nombre)
-    cerradas.pop(pos)
-    return pos
-
-
-def revertir_reabrir(cerradas, nombre, pos):
-    cerradas.insert(pos, nombre)
+# Deshacer un cierre es reabrir, y deshacer una reapertura es cerrar.
+revertir_cerrar = aplicar_reabrir
+revertir_reabrir = aplicar_cerrar

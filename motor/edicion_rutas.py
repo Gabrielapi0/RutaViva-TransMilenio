@@ -1,21 +1,14 @@
-"""R7 - Edicion de rutas: logica pura sobre la lista `rutas` compartida.
+"""R7 - Edicion de rutas: logica pura sobre la lista de paradas de UNA ruta.
 
 Estructura (contrato): rutas = [[id, [[orden, nombre], ...]], ...]
-Las modificaciones se hacen EN SITIO para que R5/R6 vean el cambio.
+Estas funciones reciben `paradas` (la lista interna de la ruta) y la modifican
+EN SITIO, para que R5/R6 vean el cambio sin copias.
 """
-from ._comun import (buscar_ruta, buscar_posicion, insertar_parada,
-                     quitar_parada_en)
+from ._comun import buscar_posicion, insertar_parada, quitar_parada_en
 
 
-def recorrido(rutas, id_ruta, al_reves=False):
-    """Nombres de las paradas de la ruta en orden (o invertidas).
-
-    Ruta inexistente -> []. Complejidad O(R + n).
-    """
-    ruta = buscar_ruta(rutas, id_ruta)
-    if ruta is None:
-        return []
-    paradas = ruta[1]
+def recorrido(paradas, al_reves=False):
+    """Nombres de las paradas en orden (o invertidas). O(p)."""
     resultado = []
     if al_reves:
         i = len(paradas) - 1
@@ -28,39 +21,30 @@ def recorrido(rutas, id_ruta, al_reves=False):
     return resultado
 
 
-def validar_agregar(rutas, id_ruta, nueva, despues_de):
-    """True si la insercion es valida (ruta existe, despues_de esta, nueva no)."""
-    ruta = buscar_ruta(rutas, id_ruta)
-    if ruta is None:
+def validar_agregar(paradas, nueva, despues_de):
+    """True si despues_de esta en la ruta y nueva no. O(p)."""
+    if buscar_posicion(paradas, despues_de) == -1:
         return False
-    if buscar_posicion(ruta[1], despues_de) == -1:
-        return False
-    if buscar_posicion(ruta[1], nueva) != -1:
-        return False
-    return True
+    return buscar_posicion(paradas, nueva) == -1
 
 
-def aplicar_agregar(rutas, id_ruta, nueva, despues_de):
+def aplicar_agregar(paradas, nueva, despues_de):
     """Inserta `nueva` justo despues de `despues_de`. Devuelve la posicion."""
-    paradas = buscar_ruta(rutas, id_ruta)[1]
     pos = buscar_posicion(paradas, despues_de) + 1
     insertar_parada(paradas, pos, nueva)
     return pos
 
 
-def aplicar_quitar(rutas, id_ruta, estacion):
-    """Elimina `estacion` de la ruta. Devuelve la posicion que tenia."""
-    paradas = buscar_ruta(rutas, id_ruta)[1]
+def aplicar_quitar(paradas, estacion):
+    """Elimina `estacion`. Devuelve la posicion que tenia."""
     pos = buscar_posicion(paradas, estacion)
     quitar_parada_en(paradas, pos)
     return pos
 
 
-def revertir_agregar(rutas, id_ruta, pos):
-    """Deshace aplicar_agregar quitando la parada de la posicion pos."""
-    quitar_parada_en(buscar_ruta(rutas, id_ruta)[1], pos)
+def revertir_agregar(paradas, pos):
+    quitar_parada_en(paradas, pos)
 
 
-def revertir_quitar(rutas, id_ruta, nombre, pos):
-    """Deshace aplicar_quitar reponiendo la parada en su sitio original."""
-    insertar_parada(buscar_ruta(rutas, id_ruta)[1], pos, nombre)
+def revertir_quitar(paradas, nombre, pos):
+    insertar_parada(paradas, pos, nombre)
