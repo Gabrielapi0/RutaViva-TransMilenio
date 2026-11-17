@@ -156,30 +156,95 @@ python Front/panel_rendimiento.py
 
 ## Conversión GTFS
 
-El conversor se encuentra en `Conversion/convertir.py`.
+El conversor está en `Conversion/convertir.py` y solo usa la librería estándar de Python.
 
-Para generar nuevamente los archivos convertidos se necesita disponer de un archivo GTFS de entrada.
-
-Ejemplo:
+Fuente: GTFS estático de TransMilenio del **14 de julio de 2021** (`GTFS-2021-07-14.zip`, unos 54 MB), publicado en el portal de datos de movilidad de Bogotá. El zip no se sube al repositorio.
 
 ```powershell
-python Conversion/convertir.py --entrada GTFS/gtfs_julio_2021.zip --salida Datos_corregidos
+python Conversion/convertir.py --entrada GTFS-2021-07-14.zip --salida Datos_convertidos
 ```
 
-**Importante:** el archivo GTFS original no está incluido necesariamente en esta versión de entrega. Si se desea reproducir la conversión, debe colocarse en la ubicación indicada o modificar el argumento `--entrada`.
+Opciones: `--fecha AAAA-MM-DD` (día de servicio; por defecto 2021-07-14) y `--todas` (incluye todo el SITP, no solo troncales). Por seguridad, el script no escribe sobre `Datos/`.
 
-El conversor genera:
+### Reglas de la conversión
 
-- `estaciones.csv`
-- `rutas.csv`
-- `horarios.csv`
+1. **Solo rutas troncales** (`route_desc = TRONCAL`). Alimentadores, zonales y demás servicios del SITP quedan fuera.
+2. **Un solo día de servicio**: el miércoles 14/07/2021, según `calendar.txt` y `calendar_dates.txt`. Así "buses al día" (R6) cuenta un día real.
+3. **Nombre de estación**: en MAYÚSCULAS, sin tildes ni símbolos (`º`) y sin el vagón o la plataforma. Por ejemplo, `Calle 19 B - 4 ó 6` queda como `CALLE 19`, y `Portal Eldorado T-6B` queda como `PORTAL ELDORADO`.
+4. Si un viaje pasa dos veces por la misma estación, se conserva **la primera**, porque una ruta no repite estaciones.
+5. **Cada patrón distinto de estaciones** de una ruta comercial es una ruta del CSV **en un solo sentido**. Si la ruta tiene una sola variante, conserva su nombre (`D51`); si tiene varias, se numeran (`B10-1`, `B10-2`).
+   - Se descartan los patrones con **menos de 4 viajes al día**.
+   - Un patrón que es solo **un pedazo de otro más largo** (una media vuelta, por ejemplo la K43 que termina en CAD) no es una ruta propia: sus horarios se suman a la variante que lo contiene.
+   - Las variantes se numeran **de la que tiene más viajes a la que tiene menos**.
+6. **Horas mayores a 24:00**: `25:10` se convierte en `01:10` (módulo 24), porque el usuario pregunta con la hora del reloj y el formato pedido es `HH:MM`. Se pierde la indicación de que el viaje es del día siguiente.
 
-### Limitaciones
+### Comparación con `Datos/`
 
-La conversión de horarios utiliza un formato de reloj de 24 horas. En consecuencia, los horarios GTFS posteriores a las 24:00 pierden la indicación de que corresponden al día siguiente.
-
-El sistema no calcula tiempos reales de espera ni garantiza la operación actual de los servicios.
+Con el GTFS del 14/07/2021, el script genera las **mismas 147 estaciones** y **las 181 rutas con el mismo recorrido** (177 también con el mismo nombre; en 5-1/5-2 y G30-1/G30-2 el número se intercambia porque tienen casi la misma cantidad de viajes). El **97,8 %** de las filas de horarios coinciden exactamente.
 
 ## Uso académico
 
 Proyecto desarrollado con fines educativos para aplicar conceptos de estructuras de datos, algoritmos de búsqueda, ordenamiento y procesamiento de información.
+
+---
+
+## Conversión de datos GTFS
+
+RutaViva incluye un conversor desarrollado en Python que transforma
+datos GTFS en los tres CSV utilizados por el motor:
+
+- estaciones.csv
+- rutas.csv
+- horarios.csv
+
+### Requisitos
+
+- Python instalado.
+- Archivo GTFS válido en formato ZIP o carpeta.
+- Espacio suficiente para generar los archivos convertidos.
+
+### Ejecutar el conversor
+
+Desde la carpeta principal del proyecto:
+
+python Conversion/convertir.py --entrada "ruta/al/archivo_gtfs.zip" --salida "Datos_corregidos"
+
+Sustituir "ruta/al/archivo_gtfs.zip" por la ubicación real del GTFS.
+
+### Archivos generados
+
+El programa genera:
+
+Datos_corregidos/estaciones.csv
+Datos_corregidos/rutas.csv
+Datos_corregidos/horarios.csv
+
+### Tratamiento de horarios
+
+GTFS permite horas posteriores a medianoche, como 25:10:00.
+
+Para adaptarlas al formato académico HH:MM, el conversor
+aplica módulo 24.
+
+Ejemplo:
+
+25:10:00 -> 01:10
+
+Esta transformación pierde la información de que el evento
+corresponde al día siguiente.
+
+### Consideraciones
+
+El archivo Datos_corregidos/horarios.csv puede superar los
+375 MB dependiendo del GTFS utilizado.
+
+Por esta razón, no se incluye directamente en el repositorio GitHub.
+
+Para utilizar los datos convertidos, primero debe ejecutarse
+el conversor con un archivo GTFS válido.
+
+Los archivos de Datos/ corresponden al conjunto académico
+utilizado durante el desarrollo y se conservan por separado.
+
+La estructura y los identificadores de las rutas pueden variar
+según la versión del GTFS utilizada.

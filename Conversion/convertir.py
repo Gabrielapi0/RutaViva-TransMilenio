@@ -1,17 +1,37 @@
-"""Convierte un GTFS estándar (carpeta o ZIP) a los CSV académicos de RutaViva.
+"""Convierte el GTFS de TransMilenio (carpeta o ZIP) a los tres CSV de RutaViva.
 
 Ejemplo desde la carpeta principal del proyecto:
-    python Conversion/convertir.py --entrada GTFS/archivo.zip --salida Datos_convertidos
+    python Conversion/convertir.py --entrada GTFS-2021-07-14.zip --salida Datos_convertidos
 
-Los tres CSV existentes en Datos/ NO se sobrescriben por defecto.
+Con el GTFS del 14 de julio de 2021 produce las mismas 147 estaciones y
+181 rutas de Datos/ (177 con el mismo nombre y recorrido exacto) y ~98 % de
+los mismos horarios. Los CSV de Datos/ NO se sobrescriben.
+
+Reglas de la conversión (explicadas en el README, sección "Conversión GTFS"):
+  1. Solo rutas TRONCALES (route_desc = TRONCAL); con --todas se incluye todo el SITP.
+  2. Un solo día de servicio: el de --fecha (por defecto miércoles 14/07/2021).
+  3. Nombre de estación: MAYÚSCULAS, sin tildes ni símbolos (º), y sin el sufijo
+     del vagón o la plataforma ("CALLE 19 B - 4 ó 6" -> "CALLE 19").
+  4. Si un viaje pasa dos veces por la misma estación, se deja la primera.
+  5. Cada patrón distinto de estaciones de una ruta comercial es una ruta del CSV
+     en un solo sentido ("B10-1", "B10-2"...; si hay uno solo, "D51").
+     - Se descartan los patrones con menos de 4 viajes al día.
+     - Un patrón que es solo un pedazo de otro más largo (media vuelta) no es una
+       ruta propia: sus viajes se suman a la variante que lo contiene.
+     - Se numeran de la variante con más viajes a la de menos.
+  6. Horas GTFS >= 24:00 (p. ej. 25:10) se pasan a la hora del reloj (01:10).
 """
 
 # argparse permite recibir la ubicación del GTFS y la carpeta de salida.
 import argparse
 # csv lee y escribe las tablas separadas por comas.
 import csv
+# datetime permite saber qué día de la semana es la fecha elegida.
+import datetime
 # io permite leer texto almacenado dentro de un ZIP.
 import io
+# re permite quitar el sufijo del vagón en los nombres de las paradas.
+import re
 # unicodedata permite quitar tildes de nombres de estaciones.
 import unicodedata
 # zipfile permite abrir un GTFS descargado en formato ZIP.
@@ -19,16 +39,35 @@ import zipfile
 # Path facilita trabajar con carpetas tanto en Windows como en otros sistemas.
 from pathlib import Path
 
+# Mínimo de viajes al día para que un patrón cuente como ruta propia.
+MIN_VIAJES = 4
+# Sufijos de vagón o plataforma: " A - 4 ó 6", " B - 1", " C - 3"...
+SUFIJO_VAGON = re.compile(r"\s+[A-Z]\s*-\s*\d.*$")
+# Sufijos de plataforma en portales: " T6", " T-6B", " T2A"...
+SUFIJO_PORTAL = re.compile(r"\s+T\s*-?\s*\d+\s*[A-Z]?$")
 
-# Esta función convierte nombres a MAYÚSCULAS, sin tildes y con espacios limpios.
+
+# Esta función convierte nombres a MAYÚSCULAS, sin tildes, sin símbolos y con espacios limpios.
 def normalizar_nombre(texto):
     # Convertimos el valor a texto, quitamos espacios y ponemos todo en mayúsculas.
     texto = str(texto or "").strip().upper()
     # Separaremos letras y marcas de acento usando la normalización de Unicode.
     texto = unicodedata.normalize("NFD", texto)
-    # Reconstruimos el nombre descartando solamente los acentos combinados.
-    texto = "".join(letra for letra in texto if unicodedata.category(letra) != "Mn")
+    # Reconstruimos el nombre descartando los acentos y los ordinales (º, ª).
+    texto = "".join(letra for letra in texto if unicodedata.category(letra) != "Mn" and letra not in "ºª")
     # Reemplazamos varios espacios consecutivos por uno solo.
+    return " ".join(texto.split())
+
+
+# Quita el vagón o la plataforma para quedarnos con el nombre de la estación.
+def nombre_de_estacion(nombre_parada):
+    # Normalizamos primero (mayúsculas y sin tildes).
+    texto = normalizar_nombre(nombre_parada)
+    # "CALLE 19 B - 4 O 6" -> "CALLE 19".
+    texto = SUFIJO_VAGON.sub("", texto)
+    # "PORTAL ELDORADO T-6B" -> "PORTAL ELDORADO".
+    texto = SUFIJO_PORTAL.sub("", texto)
+    # Limpiamos espacios sobrantes.
     return " ".join(texto.split())
 
 
@@ -53,16 +92,37 @@ def convertir_hora(valor):
     return f"{hora % 24:02d}:{minuto:02d}"
 
 
+# ¿El patrón corto aparece seguido (sin saltos) dentro del largo?
+def es_tramo_de(corto, largo):
+    # Un patrón no es tramo de sí mismo ni de uno igual o más corto.
+    if len(corto) >= len(largo):
+        return False
+    # Probamos cada posición de inicio posible dentro del patrón largo.
+    for inicio in range(len(largo) - len(corto) + 1):
+        if largo[inicio:inicio + len(corto)] == corto:
+            return True
+    return False
+
+
 # Esta clase permite leer archivos GTFS de una carpeta o de un ZIP.
 class FuenteGTFS:
     # Guardamos la ubicación original y preparamos una posible conexión ZIP.
     def __init__(self, entrada):
         # Convertimos la dirección recibida en un objeto Path.
         self.entrada = Path(entrada)
+        # Avisamos claramente si el archivo o carpeta no existe.
+        if not self.entrada.exists():
+            raise FileNotFoundError(f"No existe {self.entrada}. Revisa la ruta del GTFS.")
         # Abrimos el ZIP solamente cuando el usuario proporciona uno.
         self.zip = zipfile.ZipFile(self.entrada) if self.entrada.is_file() else None
         # Creamos un listado de rutas internas para localizar archivos en subcarpetas del ZIP.
         self.nombres = self.zip.namelist() if self.zip else []
+
+    # ¿Existe este archivo dentro del GTFS? (calendar_dates.txt es opcional).
+    def tiene(self, nombre):
+        if self.zip:
+            return any(n.rsplit("/", 1)[-1].lower() == nombre.lower() for n in self.nombres)
+        return (self.entrada / nombre).is_file() or any(self.entrada.glob(f"*/{nombre}"))
 
     # Esta función entrega las filas de un archivo GTFS como registros de texto.
     def leer(self, nombre):
@@ -99,8 +159,31 @@ class FuenteGTFS:
             self.zip.close()
 
 
+# Servicios (service_id) que operan en la fecha elegida, según calendar y calendar_dates.
+def servicios_del_dia(fuente, fecha):
+    # Día de la semana en el formato de las columnas de calendar.txt.
+    dia = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"][fecha.weekday()]
+    # La fecha como texto AAAAMMDD, igual que en el GTFS.
+    texto = fecha.strftime("%Y%m%d")
+    activos = set()
+    # calendar.txt: servicios que operan ese día de la semana dentro de su vigencia.
+    if fuente.tiene("calendar.txt"):
+        for fila in fuente.leer("calendar.txt"):
+            if fila.get(dia) == "1" and fila.get("start_date", "") <= texto <= fila.get("end_date", ""):
+                activos.add(fila["service_id"])
+    # calendar_dates.txt: excepciones (1 = se agrega ese día, 2 = se quita).
+    if fuente.tiene("calendar_dates.txt"):
+        for fila in fuente.leer("calendar_dates.txt"):
+            if fila.get("date") == texto:
+                if fila.get("exception_type") == "1":
+                    activos.add(fila["service_id"])
+                elif fila.get("exception_type") == "2":
+                    activos.discard(fila["service_id"])
+    return activos
+
+
 # Construimos los tres CSV académicos a partir de las tablas estándar del GTFS.
-def convertir(entrada, salida):
+def convertir(entrada, salida, fecha="2021-07-14", todas=False):
     # Creamos una carpeta independiente para proteger los CSV del planeador actual.
     carpeta_salida = Path(salida)
     # Evitamos sobrescribir la carpeta original Datos del proyecto accidentalmente.
@@ -109,189 +192,142 @@ def convertir(entrada, salida):
     # Abrimos la fuente del GTFS.
     fuente = FuenteGTFS(entrada)
     try:
-        # Relacionamos cada identificador de parada con su nombre y estación principal.
+        # 1) Día de servicio.
+        dia = datetime.date.fromisoformat(fecha)
+        servicios = servicios_del_dia(fuente, dia)
+        if not servicios:
+            raise ValueError(f"Ningún servicio opera el {fecha}. Prueba otra fecha con --fecha AAAA-MM-DD.")
+
+        # 2) Nombre de estación de cada parada (sin vagón ni plataforma).
         paradas = {}
-        # Leemos los registros de stops.txt.
         for fila in fuente.leer("stops.txt"):
-            # El ID es el identificador técnico de cada plataforma o estación.
             identificador = (fila.get("stop_id") or "").strip()
-            # Guardamos su nombre original normalizado.
-            nombre = normalizar_nombre(fila.get("stop_name", ""))
-            # Conservamos el ID de estación principal cuando exista parent_station.
-            padre = (fila.get("parent_station") or "").strip()
-            # Evitamos cargar filas incompletas.
+            nombre = nombre_de_estacion(fila.get("stop_name", ""))
             if identificador and nombre:
-                paradas[identificador] = (nombre, padre)
+                paradas[identificador] = nombre
 
-        # Traducimos IDs de estaciones/plataformas en nombres de estaciones consolidadas.
-        def nombre_estacion(identificador):
-            # Consultamos si la parada existe en el archivo de origen.
-            if identificador not in paradas:
-                return None
-            # Recuperamos su nombre y estación principal.
-            nombre, padre = paradas[identificador]
-            # Si hay estación principal conocida, usamos su nombre común.
-            if padre in paradas:
-                return paradas[padre][0]
-            # Si no la hay, usamos el nombre de la propia parada.
-            return nombre
-
-        # Relacionamos ID técnico de ruta con el nombre público disponible.
-        rutas_originales = {}
-        # Leemos routes.txt.
+        # 3) Rutas troncales (o todas con --todas) y su nombre comercial.
+        nombre_comercial = {}
         for fila in fuente.leer("routes.txt"):
-            # Recuperamos el ID único del servicio original.
+            if not todas and (fila.get("route_desc") or "").strip().upper() != "TRONCAL":
+                continue
             identificador = (fila.get("route_id") or "").strip()
-            # Elegimos nombre corto público, luego nombre largo y finalmente ID.
             etiqueta = (fila.get("route_short_name") or fila.get("route_long_name") or identificador).strip()
-            # Guardamos los nombres para los viajes siguientes.
             if identificador:
-                rutas_originales[identificador] = normalizar_nombre(etiqueta)
+                nombre_comercial[identificador] = normalizar_nombre(etiqueta)
 
-        # Guardamos la ruta y dirección de cada viaje programado.
+        # 4) Viajes de esas rutas que operan ese día, en el orden de trips.txt.
         viajes = {}
-        # Leemos trips.txt, que conecta los viajes con sus rutas.
-        for fila in fuente.leer("trips.txt"):
-            # Recuperamos el identificador único de cada viaje programado.
+        orden_viaje = {}
+        for posicion, fila in enumerate(fuente.leer("trips.txt")):
             viaje_id = (fila.get("trip_id") or "").strip()
-            # Recuperamos la ruta original que sigue el viaje.
             ruta_id = (fila.get("route_id") or "").strip()
-            # GTFS puede identificar dos sentidos con 0 y 1.
-            sentido = (fila.get("direction_id") or "0").strip()
-            # Solo guardamos viajes que tienen una ruta conocida.
-            if viaje_id and ruta_id in rutas_originales:
-                viajes[viaje_id] = (ruta_id, sentido)
+            if viaje_id and ruta_id in nombre_comercial and fila.get("service_id") in servicios:
+                viajes[viaje_id] = nombre_comercial[ruta_id]
+                orden_viaje[viaje_id] = posicion
 
-        # Guardaremos para cada viaje la secuencia de sus paradas y horas.
+        # 5) Paradas y horas de cada viaje.
         eventos = {}
-        # Leemos stop_times.txt, que enlaza los viajes con estaciones y horarios.
         for fila in fuente.leer("stop_times.txt"):
-            # Consultamos el ID de viaje al que pertenece el evento.
             viaje_id = (fila.get("trip_id") or "").strip()
-            # Ignoramos filas de viajes no presentes en trips.txt.
             if viaje_id not in viajes:
                 continue
-            # Buscamos el nombre normalizado de la parada.
-            estacion = nombre_estacion((fila.get("stop_id") or "").strip())
-            # Recuperamos el orden de visita de la estación.
+            estacion = paradas.get((fila.get("stop_id") or "").strip())
             posicion_texto = (fila.get("stop_sequence") or "").strip()
-            # Usamos hora de llegada o salida si una de ellas no existe.
             hora = convertir_hora(fila.get("arrival_time") or fila.get("departure_time"))
-            # Ignoramos filas sin estación o sin orden válido.
             if not estacion or not posicion_texto.isdigit():
                 continue
-            # Creamos una lista para el viaje cuando todavía no existe.
-            if viaje_id not in eventos:
-                eventos[viaje_id] = []
-            # Añadimos orden, estación y hora a la lista.
-            eventos[viaje_id].append((int(posicion_texto), estacion, hora))
+            eventos.setdefault(viaje_id, []).append((int(posicion_texto), estacion, hora))
 
-        # Cada route_id original recibe un número estable y distinto.
-        # Dos rutas GTFS pueden tener el mismo nombre público, pero NO son la misma ruta.
-        # Incluimos R<número> en el identificador para evitar colisiones de nombres.
-        codigos_ruta = {}
-        for numero, ruta_id in enumerate(sorted(rutas_originales), start=1):
-            codigos_ruta[ruta_id] = numero
-
-        # Las diferentes variantes de recorrido deben tener distintos IDs académicos.
-        patrones = {}
-        # Contamos variantes por route_id y sentido, sin recorrer patrones repetidamente.
-        conteo_variantes = {}
-        # Relacionamos cada viaje con la variante de recorrido a la que pertenece.
-        variantes_por_viaje = {}
-        # Recorremos todos los viajes programados.
-        for viaje_id, (ruta_id, sentido) in viajes.items():
-            # Recuperamos los eventos de este viaje, si existen.
-            lista = eventos.get(viaje_id, [])
-            # No generamos rutas sin paradas suficientes.
-            if not lista:
-                continue
-            # Ordenamos según stop_sequence (permitido en la conversión, fuera de Motor).
+        # 6) Patrón de estaciones de cada viaje (si repite estación, queda la primera vez).
+        patron_de = {}
+        for viaje_id, lista in eventos.items():
             lista.sort(key=lambda elemento: elemento[0])
-            # Evitamos plataformas repetidas consecutivas al consolidar estaciones.
-            secuencia = []
-            # Revisamos todas las paradas de la ruta en orden.
-            for _orden, estacion, _hora in lista:
-                # Añadimos una estación solo si no repite inmediatamente la anterior.
-                if not secuencia or secuencia[-1] != estacion:
-                    secuencia.append(estacion)
-            # No consideramos recorridos con menos de dos estaciones diferentes.
-            if len(secuencia) < 2:
+            vistas = set()
+            limpia = []
+            for _orden, estacion, hora in lista:
+                if estacion not in vistas:
+                    vistas.add(estacion)
+                    limpia.append((estacion, hora))
+            eventos[viaje_id] = limpia
+            if len(limpia) >= 2:
+                patron_de[viaje_id] = tuple(estacion for estacion, _hora in limpia)
+
+        # 7) Variantes de cada ruta comercial.
+        viajes_por_ruta = {}
+        for viaje_id in patron_de:
+            viajes_por_ruta.setdefault(viajes[viaje_id], []).append(viaje_id)
+
+        rutas_finales = {}        # nombre CSV -> tupla de estaciones
+        ruta_de_viaje = {}        # viaje_id   -> nombre CSV
+        for comercial in sorted(viajes_por_ruta):
+            lista_viajes = viajes_por_ruta[comercial]
+            # Cuántos viajes hace cada patrón.
+            conteo = {}
+            for viaje_id in lista_viajes:
+                conteo[patron_de[viaje_id]] = conteo.get(patron_de[viaje_id], 0) + 1
+            # Variantes propias: con suficientes viajes y que no sean un pedazo de otra.
+            bases = [p for p, n in conteo.items()
+                     if n >= MIN_VIAJES and not any(es_tramo_de(p, otro) for otro in conteo if otro != p)]
+            if not bases:
                 continue
-            # Identificamos una variante por ruta original, sentido y secuencia de estaciones.
-            clave = (ruta_id, sentido, tuple(secuencia))
-            # Asignamos un nombre consistente a cada variante de recorrido encontrada.
-            if clave not in patrones:
-                # Identificamos la pareja ruta GTFS y sentido de circulación.
-                pareja = (ruta_id, sentido)
-                # Numeramos solo las secuencias distintas de esta ruta y sentido.
-                numero = conteo_variantes.get(pareja, 0) + 1
-                conteo_variantes[pareja] = numero
-                # R<número> diferencia rutas GTFS con la misma etiqueta comercial.
-                # De este modo no mezclamos las paradas de dos route_id distintos.
-                nombre = f"{rutas_originales[ruta_id]}-R{codigos_ruta[ruta_id]}-S{sentido}-V{numero}"
-                # Guardamos la secuencia y el identificador académico.
-                patrones[clave] = (nombre, secuencia)
-            # Guardamos a qué variante pertenece este viaje.
-            variantes_por_viaje[viaje_id] = patrones[clave][0]
+            # Cada viaje va a su variante; las medias vueltas, a la variante que las contiene.
+            asignado = {}
+            total = {p: 0 for p in bases}
+            primero = {}
+            for viaje_id in lista_viajes:
+                patron = patron_de[viaje_id]
+                if patron in total:
+                    destino = patron
+                else:
+                    contienen = [b for b in bases if es_tramo_de(patron, b)]
+                    if not contienen:
+                        continue  # patrón raro (< 4 viajes) que no es tramo de ninguna variante
+                    destino = max(contienen, key=lambda b: conteo[b])
+                asignado[viaje_id] = destino
+                total[destino] += 1
+                primero[destino] = min(primero.get(destino, orden_viaje[viaje_id]), orden_viaje[viaje_id])
+            # Numeramos de la variante con más viajes a la de menos.
+            ordenadas = sorted(bases, key=lambda b: (-total[b], primero.get(b, 0)))
+            nombres = {}
+            for i, b in enumerate(ordenadas, start=1):
+                nombres[b] = comercial if len(ordenadas) == 1 else f"{comercial}-{i}"
+                rutas_finales[nombres[b]] = b
+            for viaje_id, destino in asignado.items():
+                ruta_de_viaje[viaje_id] = nombres[destino]
 
-        # Comprobamos que cada patrón tenga su propio identificador antes de escribir.
-        nombres_patrones = [nombre for nombre, _secuencia in patrones.values()]
-        if len(nombres_patrones) != len(set(nombres_patrones)):
-            raise ValueError("Se generaron identificadores de recorridos repetidos")
-
-        # Creamos la carpeta destino cuando todavía no existe.
+        # 8) Escribir los tres CSV.
         carpeta_salida.mkdir(parents=True, exist_ok=True)
-        # Seleccionamos únicamente estaciones que aparecen en recorridos utilizables.
-        estaciones = sorted({estacion for _nombre, secuencia in patrones.values() for estacion in secuencia})
-        # Escribimos estaciones.csv con una sola columna.
+        estaciones = sorted({e for recorrido in rutas_finales.values() for e in recorrido})
         with (carpeta_salida / "estaciones.csv").open("w", encoding="utf-8", newline="") as archivo:
-            # Preparamos un escritor de CSV.
             escritor = csv.writer(archivo)
-            # Escribimos el encabezado exacto exigido por el proyecto.
             escritor.writerow(["nombre"])
-            # Escribimos una fila por estación, sin duplicados.
             for estacion in estaciones:
                 escritor.writerow([estacion])
 
-        # Escribimos rutas.csv con el recorrido de cada variante en un único sentido.
         with (carpeta_salida / "rutas.csv").open("w", encoding="utf-8", newline="") as archivo:
-            # Preparamos el escritor de rutas.
             escritor = csv.writer(archivo)
-            # Escribimos las columnas del contrato académico.
             escritor.writerow(["ruta", "orden", "estacion"])
-            # Ordenamos las variantes por identificador para resultados reproducibles.
-            for nombre, secuencia in sorted(patrones.values(), key=lambda p: p[0]):
-                # Numeramos las paradas empezando en uno.
-                for orden, estacion in enumerate(secuencia, start=1):
+            for nombre in sorted(rutas_finales):
+                for orden, estacion in enumerate(rutas_finales[nombre], start=1):
                     escritor.writerow([nombre, orden, estacion])
 
-        # Escribimos horarios.csv con las horas de paso de cada viaje GTFS.
+        filas_horario = 0
         with (carpeta_salida / "horarios.csv").open("w", encoding="utf-8", newline="") as archivo:
-            # Preparamos el escritor de horarios.
             escritor = csv.writer(archivo)
-            # Escribimos el encabezado solicitado por el proyecto.
             escritor.writerow(["ruta", "estacion", "hora"])
-            # Revisamos todos los viajes que tienen una variante válida.
-            for viaje_id, nombre in variantes_por_viaje.items():
-                # Recorremos los eventos cronológicamente dentro de ese viaje.
-                for _orden, estacion, hora in eventos[viaje_id]:
-                    # Solo escribimos eventos con horario disponible.
+            for viaje_id in sorted(ruta_de_viaje, key=lambda v: orden_viaje[v]):
+                for estacion, hora in eventos[viaje_id]:
                     if hora is not None:
-                        escritor.writerow([nombre, estacion, hora])
+                        escritor.writerow([ruta_de_viaje[viaje_id], estacion, hora])
+                        filas_horario += 1
 
-        # Mostramos un resumen final de archivos producidos.
         print("CONVERSIÓN GTFS TERMINADA")
-        # Mostramos cuántas estaciones quedaron registradas.
+        print("Día de servicio:", fecha, "| Rutas:", "todas" if todas else "solo troncales")
         print("Estaciones:", len(estaciones))
-        # Mostramos cuántas variantes de servicio se detectaron.
-        print("Recorridos de un sentido:", len(patrones))
-        # Indicamos cómo se construyeron los códigos únicos para las variantes.
-        print("Identificadores únicos: nombre-R<número de route_id>-S<sentido>-V<variante>")
-        # Mostramos la carpeta de salida para localizar los resultados.
+        print("Rutas (un sentido):", len(rutas_finales))
+        print("Horarios:", filas_horario)
         print("Archivos generados en:", carpeta_salida.resolve())
-        # Recordamos que los resultados varían según el GTFS utilizado.
-        print("Nota: no se garantiza coincidencia con los CSV del profesor de 2021.")
     finally:
         # Cerramos el ZIP aunque haya ocurrido un error.
         fuente.cerrar()
@@ -299,13 +335,10 @@ def convertir(entrada, salida):
 
 # Este bloque se ejecuta cuando abrimos convertir.py como programa principal.
 if __name__ == "__main__":
-    # Configuramos las opciones que podemos escribir en la terminal.
-    parser = argparse.ArgumentParser(description="Convierte un GTFS a CSV académicos de TransMilenio")
-    # La entrada debe indicar la carpeta GTFS o un archivo ZIP auténtico.
+    parser = argparse.ArgumentParser(description="Convierte el GTFS de TransMilenio a los CSV de RutaViva")
     parser.add_argument("--entrada", required=True, help="Ruta al ZIP o carpeta GTFS")
-    # La salida queda separada de Datos para evitar sobrescribir archivos existentes.
     parser.add_argument("--salida", default="Datos_convertidos", help="Carpeta donde se crean los CSV")
-    # Leemos los valores proporcionados por el usuario.
+    parser.add_argument("--fecha", default="2021-07-14", help="Día de servicio a convertir (AAAA-MM-DD)")
+    parser.add_argument("--todas", action="store_true", help="Incluir todo el SITP, no solo troncales")
     argumentos = parser.parse_args()
-    # Llamamos a la función que ejecuta toda la conversión.
-    convertir(argumentos.entrada, argumentos.salida)
+    convertir(argumentos.entrada, argumentos.salida, argumentos.fecha, argumentos.todas)
