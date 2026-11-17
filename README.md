@@ -138,8 +138,8 @@ Detalle completo en `DOCUMENTACION_R5.md`. No se mide en rendimiento (diap. 11).
 
 | Req | Estructura y algoritmo | O grande |
 |---|---|---|
-| R7 | La lista `rutas` del contrato, modificada en sitio (búsqueda lineal de la ruta y de la parada, `insert`/`pop` y renumeración) | `agregar_parada`/`quitar_parada` O(R + n + S), con n = paradas de la ruta; `recorrido` O(R + n) |
-| R8 | La lista `cerradas` del contrato | `cerrar`/`reabrir` O(S + c) |
+| R7 | La lista `rutas` del contrato, modificada en sitio. La ruta se ubica con una **tabla hash propia** (id → ruta) que se arma una sola vez; dentro de la ruta, `insert`/`pop` y renumeración | `agregar_parada`/`quitar_parada` **O(n)**, con n = paradas de la ruta (ubicar la ruta es O(1)); `recorrido` O(n) |
+| R8 | La lista `cerradas` del contrato. La existencia de la estación se valida con una **tabla hash propia** de nombres, armada una sola vez | `cerrar`/`reabrir` **O(1)** para validar + O(c), con c = estaciones cerradas |
 | R9 | Patrón Comando con dos pilas (deshacer y rehacer). Un cambio nuevo vacía la pila de rehacer | apilar y desapilar O(1), más el costo del comando |
 
 Detalle, alternativas y casos borde en `INTEGRANTE_4_R7_R9.md`. `Red` hereda estos métodos de `OperarRed`.

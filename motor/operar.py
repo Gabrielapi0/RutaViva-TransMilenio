@@ -21,6 +21,12 @@ from .historial import (Historial, CmdCerrar, CmdReabrir,
                         CmdAgregarParada, CmdQuitarParada)
 
 
+from .tabla_hash import TablaHash
+
+# Cache: [lista de estaciones para la que se armó, tabla hash de nombres].
+_CACHE_ESTACIONES = [None, None]
+
+
 class OperarRed:
 
     # ---------- soporte interno ----------
@@ -34,11 +40,16 @@ class OperarRed:
         self._version = getattr(self, "_version", 0) + 1
 
     def _existe_estacion(self, nombre):
-        """Busqueda lineal por defecto; Red puede sobreescribirla con algo mas rapido."""
-        for e in self.estaciones:
-            if e == nombre:
-                return True
-        return False
+        """Tabla hash propia con los nombres de las estaciones: O(1) esperado.
+        Se arma una sola vez por red (las estaciones no cambian: R7 mueve
+        estaciones entre rutas, pero no crea ni borra estaciones)."""
+        if _CACHE_ESTACIONES[0] is not self.estaciones:
+            tabla = TablaHash(2 * len(self.estaciones) + 16)
+            for e in self.estaciones:
+                tabla.poner(e, True)
+            _CACHE_ESTACIONES[0] = self.estaciones
+            _CACHE_ESTACIONES[1] = tabla
+        return _CACHE_ESTACIONES[1].obtener(nombre) is not None
 
     def _abierta(self, nombre):
         """True si la estacion no esta cerrada. Usar en R1-R6."""

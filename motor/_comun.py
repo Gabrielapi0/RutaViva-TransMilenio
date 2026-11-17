@@ -20,12 +20,23 @@ def normalizar(texto):
     return t
 
 
+# Cache de la tabla hash de rutas: [lista de rutas para la que se armó, tabla].
+_CACHE_RUTAS = [None, None]
+
+
 def buscar_ruta(rutas, id_ruta):
-    """Devuelve la ruta [id, paradas] cuyo id coincide, o None. O(R)."""
-    for ruta in rutas:
-        if normalizar(ruta[0]) == id_ruta:
-            return ruta
-    return None
+    """Devuelve la ruta [id, paradas] cuyo id coincide, o None.
+    Usa una tabla hash propia (id -> ruta) que se arma una sola vez por red,
+    en O(R); después cada búsqueda es O(1) esperado. La tabla guarda la misma
+    lista de paradas de cada ruta, así que ve los cambios de R7 en sitio."""
+    if _CACHE_RUTAS[0] is not rutas:
+        from .tabla_hash import TablaHash
+        tabla = TablaHash(2 * len(rutas) + 16)
+        for ruta in rutas:
+            tabla.poner(normalizar(ruta[0]), ruta)
+        _CACHE_RUTAS[0] = rutas
+        _CACHE_RUTAS[1] = tabla
+    return _CACHE_RUTAS[1].obtener(id_ruta)
 
 
 def buscar_posicion(paradas, nombre):
