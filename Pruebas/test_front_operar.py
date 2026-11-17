@@ -4,8 +4,8 @@ import sys
 from _red_prueba import red_mini
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "Front"))
-from flask import Flask  # noqa: E402
-from operar_red import crear_blueprint  # noqa: E402
+from flask import Flask  # type: ignore # noqa: E402
+from operar_red import crear_blueprint  # type: ignore # noqa: E402
 
 
 def test_flujo():
