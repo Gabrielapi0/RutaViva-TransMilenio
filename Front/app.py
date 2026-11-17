@@ -174,22 +174,45 @@ def pintar_mapa(puntos, troncales, servicios, seleccion, origen, destino, transb
       const esCambio=clave && clave===focos.transbordo, esOrigen=clave && clave===focos.origen, esDestino=clave && clave===focos.destino; // Roles.
       const color=esCambio?'#0891b2':incluida?'#e63946':'#78889b'; // Color según el rol.
       const marcador=L.circleMarker([p.lat,p.lon],{radius:esCambio?10:(incluida?8:4),color:'#ffffff',weight:1.5,fillColor:color,fillOpacity:.93}).addTo(mapa); // Punto.
-      const lista=servicios[clave]||[]; // Servicios que pasan por la estación.
-      const etiquetas=lista.slice(0,10).map(c=>'<span class="rv-badge">'+escapar(c)+'</span>').join(''); // Hasta 10 etiquetas.
-      const extra=lista.length>10?'<span class="rv-badge">+'+(lista.length-10)+' más</span>':''; // Contador del resto.
-      let texto='<div class="rv-card"><div class="rv-kicker">🚏 Estación TransMilenio</div><div class="rv-name">'+escapar(p.nombre)+'</div>'; // Encabezado de la tarjeta.
-      if(p.ubicacion){texto+='<div class="rv-address">📍 '+escapar(p.ubicacion)+'</div>';} // Dirección, si existe.
-      if(esOrigen)texto+='<span class="rv-status">🟢 Tu origen</span>'; // Marca de origen.
-      if(esDestino)texto+='<span class="rv-status">🏁 Tu destino</span>'; // Marca de destino.
-      if(esCambio)texto+='<span class="rv-status">🔄 Transbordo</span>'; // Marca de transbordo.
-      if(incluida && !esOrigen && !esDestino && !esCambio)texto+='<span class="rv-status">✓ En tu recorrido</span>'; // Parada intermedia.
-      if(clave && lista.length){ // Si tiene servicios asociados, los listamos.
-        texto+='<div class="rv-section">🚌 Servicios asociados <span class="rv-muted">('+lista.length+')</span></div><div class="rv-badges">'+etiquetas+extra+'</div>'; // Etiquetas.
-        texto+='<div class="rv-note">Servicios del conjunto de datos seleccionado. Información de referencia; no garantiza operación actual.</div>'; // Aclaración.
-      }else if(clave){ // Coincide con el CSV pero sin servicios.
-        texto+='<div class="rv-muted">No hay servicios asociados en el conjunto de datos seleccionado.</div>'; // Aviso.
-      }else{ // No coincide con ninguna estación del CSV.
-        texto+='<div class="rv-muted">Esta estación no tiene una coincidencia confirmada en el conjunto de datos seleccionado.</div>'; // Aviso.
+          # R10 recibe la hora de llegada de cada pasajero y devuelve la hora en que sube cada uno.
+    horas = []
+    for m in range(ventana):
+        for _ in range(llegadas[m]):
+            horas.append(m)
+    t0 = time.perf_counter()
+    sube = simular_fila(horas, frec, cap)
+    ms = (time.perf_counter() - t0) * 1000
+
+    # Serie para la animación, calculada con el resultado del MISMO motor: en cada bus
+    # que sale dentro de la ventana, cuántos suben y cuántos quedan esperando.
+    suben_en = [0] * (ventana + 1)
+    atendidos, espera_total = 0, 0
+    for i in range(len(horas)):
+        if sube[i] <= ventana:
+            suben_en[sube[i]] += 1
+            atendidos += 1
+            espera_total += sube[i] - horas[i]
+    en_espera = p - atendidos
+    espera_promedio = (espera_total / atendidos) if atendidos else 0
+    salidas = [t for t in range(1, ventana + 1) if t % frec == 0]
+    paso = max(1, len(salidas) // 120)
+    serie, llegados, subidos, suben_paso = [], 0, 0, 0
+    minuto = 0
+    for j in range(len(salidas)):
+        t = salidas[j]
+        while minuto <= t and minuto < ventana:
+            llegados += llegadas[minuto]
+            minuto += 1
+        subidos += suben_en[t]
+        suben_paso += suben_en[t]
+        if j % paso == 0:
+            serie.append({"t": 360 + t, "h": hhmm(360 + t), "cola": llegados - subidos,
+                          "suben": suben_paso})
+            suben_paso = 0
+    total = {"atendidos": atendidos, "en_espera": en_espera, "espera_promedio": espera_promedio}
+    if not serie:
+        serie = [{"t": 360, "h": "06:00", "cola": total["en_espera"], "suben": 0}]
+     
       }
       if(clave){texto+='<details class="rv-details"><summary>Ver referencia del conjunto de datos</summary><div>'+escapar(clave)+' · 2021</div></details>';} // Referencia.
       texto+='</div>'; // Cerramos la tarjeta.

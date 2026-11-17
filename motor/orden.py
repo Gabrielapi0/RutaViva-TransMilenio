@@ -114,3 +114,56 @@ class TablaHash:
             if par[0] == clave:
                 return par[1]
         return None
+
+def limite_inferior(lista_ordenada, objetivo):
+    izq = 0
+    der = len(lista_ordenada)
+    while izq < der:
+        mid = (izq + der) // 2
+        if lista_ordenada[mid] < objetivo:
+            izq = mid + 1
+        else:
+            der = mid
+    return izq
+
+
+def ordenar_indices(valores):
+    n = len(valores)
+    a = []
+    b = []
+    for i in range(n):
+        a.append(i)
+        b.append(0)
+    ancho = 1
+    while ancho < n:
+        inicio = 0
+        while inicio < n:
+            medio = inicio + ancho
+            if medio > n:
+                medio = n
+            fin = inicio + 2 * ancho
+            if fin > n:
+                fin = n
+            x = inicio
+            y = medio
+            k = inicio
+            while x < medio and y < fin:
+                if valores[a[x]] <= valores[a[y]]:
+                    b[k] = a[x]
+                    x += 1
+                else:
+                    b[k] = a[y]
+                    y += 1
+                k += 1
+            while x < medio:
+                b[k] = a[x]
+                x += 1
+                k += 1
+            while y < fin:
+                b[k] = a[y]
+                y += 1
+                k += 1
+            inicio += 2 * ancho
+        a, b = b, a
+        ancho *= 2
+    return a
