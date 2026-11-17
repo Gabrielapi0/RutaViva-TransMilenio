@@ -206,8 +206,10 @@ def medir_red(Red, simular_fila, carpeta, factor):
              llamadas=40)
     intentar("deshacer", lambda i: (red.cerrar(estaciones[i]), red.deshacer()), llamadas=40)
 
-    # R10: n = llegadas, 20.000 por cada factor (formato a CONFIRMAR con Integrante 1)
-    llegadas = list(range(0, 20000 * factor))
+    # R10: formato de Integrante 1 -> llegadas[minuto] = personas que llegan ese minuto.
+    # n = minutos simulados (20.000 por factor, ~300.000 pasajeros por factor).
+    rnd = random.Random(11)
+    llegadas = [rnd.randrange(0, 31) for _ in range(20000 * factor)]
     intentar("fila", lambda i: simular_fila(llegadas, 5, 100), llamadas=1, lotes=3)
     return res
 
@@ -215,7 +217,7 @@ def medir_red(Red, simular_fila, carpeta, factor):
 def correr_panel(carpeta_base="Datos", factores=FACTORES):
     """Mide todas las operaciones en redes de tamano f*n.
     Devuelve una lista de filas listas para graficar o mostrar en tabla."""
-    from motor.__initial__ import Red, simular_fila
+    from motor import Red, simular_fila
 
     temporal = tempfile.mkdtemp(prefix="rutaviva_panel_")
     mediciones = {}
