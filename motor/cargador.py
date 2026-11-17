@@ -1,5 +1,7 @@
 import csv
 
+from .tabla_hash import TablaHash
+
 def _limpiar(texto):
     if not texto:
         return ""
@@ -49,18 +51,18 @@ def cargar_rutas(carpeta):
                 nombre_est = _limpiar(fila[2]).upper()
                 rutas_raw.append((id_ruta, orden, nombre_est))
 
+    # Agrupamos las filas por ruta. La ruta se ubica con la tabla hash propia
+    # (id -> [id, paradas]) en O(1) esperado, así que agrupar cuesta O(P) en total.
+    # (Antes se recorría la lista de rutas por cada fila: O(P * R), cuadrático).
     rutas_resultado = []
+    indice_rutas = TablaHash()
     for id_ruta, orden, nombre_est in rutas_raw:
-        encontrada = None
-        for r in rutas_resultado:
-            if r[0] == id_ruta:
-                encontrada = r
-                break
-
+        encontrada = indice_rutas.obtener(id_ruta)
         if encontrada is None:
-            rutas_resultado.append([id_ruta, [[orden, nombre_est]]])
-        else:
-            encontrada[1].append([orden, nombre_est])
+            encontrada = [id_ruta, []]
+            rutas_resultado.append(encontrada)
+            indice_rutas.poner(id_ruta, encontrada)
+        encontrada[1].append([orden, nombre_est])
 
     for r in rutas_resultado:
         paradas = r[1]
