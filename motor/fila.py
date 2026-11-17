@@ -1,3 +1,6 @@
+from .orden import ordenar_indices
+
+
 class Nodo:
     def __init__(self, valor):
         self.valor = valor
@@ -35,27 +38,32 @@ class Cola:
 
 
 def simular_fila(llegadas, frecuencia, capacidad):
-    cola = Cola()
-    pasajeros_atendidos = 0
-    espera_total = 0
+    n = len(llegadas)
+    resultado = []
+    for _ in range(n):
+        resultado.append(0)
+    if n == 0 or frecuencia <= 0 or capacidad <= 0:
+        return resultado
 
-    for minuto in range(len(llegadas)):
-        personas = llegadas[minuto]
-        for _ in range(personas):
-            cola.encolar(minuto)
+    orden = ordenar_indices(llegadas)      # merge sort propio, estable
+    fila = Cola()
+    for indice in orden:
+        fila.encolar(indice)
 
-        if (minuto + 1) % frecuencia == 0:
-            subieron = 0
-            while not cola.esta_vacia() and subieron < capacidad:
-                minuto_llegada = cola.desencolar()
-                espera_total += (minuto - minuto_llegada)
-                pasajeros_atendidos += 1
-                subieron += 1
-
-    espera_promedio = (espera_total / pasajeros_atendidos) if pasajeros_atendidos > 0 else 0
-
-    return {
-        "atendidos": pasajeros_atendidos,
-        "en_espera": cola.tamano,
-        "espera_promedio": espera_promedio
-    }
+    bus = 0
+    abordo = 0
+    while not fila.esta_vacia():
+        indice = fila.desencolar()
+        instante = llegadas[indice]
+        if bus > 0 and instante <= bus and abordo < capacidad:
+            abordo += 1
+        else:
+            siguiente = -(-instante // frecuencia) * frecuencia   # techo
+            if siguiente < frecuencia:
+                siguiente = frecuencia                            # primer bus
+            if siguiente <= bus:
+                siguiente = bus + frecuencia                      # bus lleno
+            bus = siguiente
+            abordo = 1
+        resultado[indice] = bus
+    return resultado

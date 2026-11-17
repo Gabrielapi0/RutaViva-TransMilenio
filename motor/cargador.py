@@ -1,5 +1,4 @@
 import csv
-import os
 
 def _limpiar(texto):
     if not texto:
@@ -8,12 +7,14 @@ def _limpiar(texto):
 
 
 def cargar_estaciones(carpeta):
-    ruta_csv = os.path.join(carpeta, "estaciones.csv")
+    ruta_csv = carpeta + "/estaciones.csv"
     estaciones = []
-    if not os.path.exists(ruta_csv):
+    try:
+        f = open(ruta_csv, mode='r', encoding='utf-8')
+    except FileNotFoundError:
         return estaciones
 
-    with open(ruta_csv, mode='r', encoding='utf-8') as f:
+    with f:
         lector = csv.reader(f)
         encabezado = True
         for fila in lector:
@@ -28,12 +29,14 @@ def cargar_estaciones(carpeta):
 
 
 def cargar_rutas(carpeta):
-    ruta_csv = os.path.join(carpeta, "rutas.csv")
+    ruta_csv = carpeta + "/rutas.csv"
     rutas_raw = []
-    if not os.path.exists(ruta_csv):
+    try:
+        f = open(ruta_csv, mode='r', encoding='utf-8')
+    except FileNotFoundError:
         return []
 
-    with open(ruta_csv, mode='r', encoding='utf-8') as f:
+    with f:
         lector = csv.reader(f)
         encabezado = True
         for fila in lector:
@@ -73,12 +76,14 @@ def cargar_rutas(carpeta):
 
 
 def cargar_horarios(carpeta):
-    ruta_csv = os.path.join(carpeta, "horarios.csv")
+    ruta_csv = carpeta + "/horarios.csv"
     horarios = []
-    if not os.path.exists(ruta_csv):
+    try:
+        f = open(ruta_csv, mode='r', encoding='utf-8')
+    except FileNotFoundError:
         return horarios
 
-    with open(ruta_csv, mode='r', encoding='utf-8') as f:
+    with f:
         lector = csv.reader(f)
         encabezado = True
         for fila in lector:

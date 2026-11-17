@@ -6,57 +6,35 @@ RutaViva es una aplicación académica desarrollada en Python que permite consul
 
 El sistema identifica viajes directos y alternativas con máximo un transbordo. También permite seleccionar recorridos según la cantidad de tramos o de cambios de servicio.
 
-Incluye una interfaz desarrollada con Streamlit, un diagrama de estaciones y un mapa geográfico interactivo.
+Incluye una interfaz web con estilo TransMilenio: planeador de viajes, pantalla de llegadas por estación, ranking, centro de control, simulador de hora pico y panel de rendimiento.
 
 ## Requisitos
 
-- Python 3.14 o una versión compatible con las dependencias.
-- Conexión a internet para cargar los mapas base, cuando sea necesario.
-- Streamlit 1.66.1.
+- Python 3.10 o superior. La app no necesita instalar nada: el servidor usa solo la librería estándar.
 
-## Instalación
+## Ejecución (un solo comando)
 
-Abrir una terminal dentro de la carpeta principal del proyecto.
+Desde la carpeta principal del proyecto:
 
-Instalar las dependencias:
+    python app.py
 
-```powershell
-python -m pip install -r requirements.txt
-```
+La aplicación se abre sola en el navegador. Si no, visitar http://localhost:8000
 
-## Ejecución
+Opciones: `python app.py --puerto 8080` · `python app.py --datos Pruebas/Red_pequena` · `--sin-navegador`
 
-Desde la carpeta principal del proyecto, ejecutar:
+## Fuente de información
 
-```powershell
-python -m streamlit run Front/app.py
-```
-
-La aplicación se abrirá en el navegador.
-
-Si no se abre automáticamente, visitar:
-
-http://localhost:8501
-
-## Fuentes de información
-
-RutaViva permite trabajar con dos conjuntos de datos:
-
-**Datos académicos del profesor:** archivos CSV proporcionados para el desarrollo del proyecto.
-
-**Datos GTFS convertidos:** archivos generados a partir de un conjunto GTFS descargado en 2026.
-
-Los datos convertidos se encuentran en `Datos_corregidos`.
+Los archivos de `Datos/` son la red de TransMilenio convertida desde el GTFS de julio de 2021, que es la fuente que pide el enunciado. La aplicación y el motor solo leen esos tres CSV.
 
 La información se utiliza con fines académicos y no garantiza la disponibilidad actual de los servicios.
 
 ## Estructura del proyecto
 
-- `Assets/`: recursos visuales.
 - `Conversion/`: conversor GTFS y programas de validación.
-- `Datos/`: archivos académicos originales.
-- `Datos_corregidos/`: archivos convertidos desde GTFS.
-- `Front/`: interfaz y visualización geográfica.
+- `Datos/`: estaciones.csv, rutas.csv y horarios.csv (GTFS julio 2021).
+- `app.py`: servidor de la interfaz web (traduce peticiones a llamadas del motor).
+- `web/`: interfaz (HTML, CSS y JavaScript).
+- `Front/`: panel de rendimiento (R11) y pantalla de operación (R7–R9).
 - `Motor/`: algoritmo de búsqueda de recorridos.
 - `requirements.txt`: dependencias necesarias.
 - `README.md`: instrucciones del proyecto.
@@ -68,19 +46,29 @@ La información se utiliza con fines académicos y no garantiza la disponibilida
 - Búsqueda de recorridos con máximo un transbordo.
 - Selección entre menos tramos y menos transbordos.
 - Simulación de estaciones cerradas.
-- Visualización del itinerario.
-- Mapa geográfico interactivo.
-- Selección entre los conjuntos de datos académicos y GTFS.
+- Visualización del itinerario con hora del próximo bus.
+- Pantalla de llegadas por estación, ranking, centro de control, simulador de hora pico y panel de rendimiento.
 
 ## Decisiones técnicas por requisito (R12)
 
 Convenciones: **S** = estaciones, **R** = rutas, **P** = total de paradas de todas las rutas, **E** = eventos de `horarios.csv`, **c** = estaciones cerradas, **k** = tamaño pedido. Cada sección dice qué es *n*.
 
-### R1 – R3 · Estado, autocompletar y rango (Integrante 1)
+### R1 – R3 · Estado, autocompletar y rango (Integrante 1) — `motor/__init__.py`, `motor/tabla_hash.py`, `motor/orden.py`
 
-> **PENDIENTE (Integrante 1):** estructura que guarda las estaciones, por qué sirve para buscar, autocompletar y listar rangos, alternativa descartada y O grande de cada operación.
->
-> Estado actual del código, según el panel R11: `estado` recorre las estaciones y las rutas (O(S + P)); `autocompletar` reordena las estaciones en cada llamada (O(S log S)); `rango` recorre todas (O(S)).
+| Req | Estructura y algoritmo | O grande |
+|---|---|---|
+| R1 `estado` | **Tabla hash propia** (`TablaHash`): nombre de estación → lista de rutas que paran en ella. Encadenamiento separado, hash polinomial (`h·33 + ord(c)`) módulo un primo, y duplica las cubetas cuando hay más elementos que cubetas. Se arma la primera vez que se consulta, en O(S + P), y solo se rearma si R7/R9 cambiaron las rutas (se compara `_version`, O(1)). | **O(1)** esperado + O(c) para saber si está cerrada |
+| R2 `autocompletar` | **Arreglo ordenado** de estaciones, ordenado **una sola vez** al cargar con merge sort propio (O(S log S)). **Búsqueda binaria** (`limite_inferior`) del primer nombre ≥ prefijo y avance mientras empiece por el prefijo, saltando las cerradas. | **O(log S + k)** (× c por revisar cierres) |
+| R3 `rango` | El mismo arreglo ordenado: búsqueda binaria de `desde` y avance hasta pasar `hasta`, saltando las cerradas. | **O(log S + m)**, m = estaciones en el rango |
+
+- **Por qué:** R1 solo pregunta por un nombre exacto, así que la tabla hash da O(1) sin pagar un orden que no usa. R2 y R3 necesitan orden alfabético: en un arreglo ordenado, todos los nombres con un mismo prefijo o dentro de un rango quedan seguidos, y la búsqueda binaria encuentra el inicio en log S. Las estaciones no cambian durante la ejecución, así que basta con ordenar una vez.
+- **Alternativas descartadas:**
+  - Recorrer la lista en cada consulta: O(S) en R1 y R3. Era la primera versión, y el panel mostraba que el tiempo se duplicaba al duplicar la red.
+  - Reordenar en cada llamada: O(S log S) por consulta.
+  - Un trie para R2: mismo costo para prefijos, pero no sirve para rangos y usa mucha más memoria.
+  - Un árbol AVL: sirve si se insertan estaciones seguido; aquí no hace falta.
+- **Bordes:** el nombre se normaliza (espacios y MAYÚSCULAS); `k <= 0` → `[]`; `desde > hasta` → `[]`; las estaciones cerradas no salen en R2 ni en R3, y R1 las reporta como `CERRADA`.
+- **Medición (R11):** al duplicar la red, R1 crece ×1,08 y R2 ×1,07 (casi planas, como O(1) y O(log S + k)). R3 crece con m porque las copias de la red caen dentro del rango.
 
 ### R4 · `proximo_bus(estacion, ruta, hora)` (Integrante 2) — `motor/horarios.py`
 
@@ -156,9 +144,18 @@ Detalle completo en `DOCUMENTACION_R5.md`. No se mide en rendimiento (diap. 11).
 
 Detalle, alternativas y casos borde en `INTEGRANTE_4_R7_R9.md`. `Red` hereda estos métodos de `OperarRed`.
 
-### R10 · `simular_fila(llegadas, frecuencia, capacidad)` (Integrante 1)
+### R10 · `simular_fila(llegadas, frecuencia, capacidad)` (Integrante 1) — `motor/fila.py`
 
-> **PENDIENTE (Integrante 1):** cómo se ordenan las llegadas, qué estructura es la fila y su O grande. Debe devolver una lista (por ejemplo, `simular_fila([30, 5, 5, 70], 60, 2)` → `[120, 60, 60, 120]`), no un diccionario.
+- **Entrada y salida:** `llegadas[i]` es el minuto en que llega el pasajero i. Devuelve una **lista** del mismo largo con el minuto en que sube cada uno, en el mismo orden. Ejemplo: `simular_fila([30, 5, 5, 70], 60, 2)` → `[120, 60, 60, 120]`.
+- **Algoritmo:**
+  1. Se ordenan los **índices** de los pasajeros por hora de llegada con **merge sort propio y estable** (`ordenar_indices`). Si dos llegan al mismo tiempo, sube primero el que aparece antes en la lista.
+  2. Todos entran en ese orden a una **cola FIFO enlazada propia** (`Cola`: encolar y desencolar O(1)).
+  3. Se desencola uno por uno. Si el bus actual todavía no ha salido para él (llegó antes o justo en el minuto de salida) y le queda cupo, sube. Si no, toma el siguiente bus: el primer múltiplo de la frecuencia que sea ≥ su llegada, y si ese bus ya salió lleno, el siguiente.
+- **Decisiones:** el primer bus sale en `t = frecuencia`. Quien llega justo en el minuto de salida alcanza a subir. Con `frecuencia` o `capacidad` ≤ 0 se devuelve una lista de ceros.
+- **O grande:** **O(p log p)** por el ordenamiento, más O(p) de la simulación, con p = pasajeros. Si las llegadas ya vienen ordenadas, la simulación en sí es lineal. Panel R11: ×2,35 al duplicar, frente a ×2,11 esperado.
+- **Alternativas descartadas:**
+  - Simular minuto a minuto: depende de cuánto dura la hora pico, no de los pasajeros.
+  - Una lista con `pop(0)`: cada salida cuesta O(p), en total O(p²), inviable con cientos de miles de pasajeros.
 
 ### R11 · Panel de rendimiento (Integrante 2) — `Front/panel_rendimiento.py`
 
@@ -179,93 +176,32 @@ python Front/panel_rendimiento.py
 
 ## Conversión GTFS
 
-El conversor se encuentra en `Conversion/convertir.py`.
+El conversor está en `Conversion/convertir.py` y solo usa la librería estándar de Python.
 
-Para generar nuevamente los archivos convertidos se necesita disponer de un archivo GTFS de entrada.
-
-Ejemplo:
+Fuente: GTFS estático de TransMilenio del **14 de julio de 2021** (`GTFS-2021-07-14.zip`, unos 54 MB), publicado en el portal de datos de movilidad de Bogotá. El zip no se sube al repositorio.
 
 ```powershell
-python Conversion/convertir.py --entrada GTFS/GTFS-2026-04-29.zip --salida Datos_corregidos
+python Conversion/convertir.py --entrada GTFS-2021-07-14.zip --salida Datos_convertidos
 ```
 
-**Importante:** el archivo GTFS original no está incluido necesariamente en esta versión de entrega. Si se desea reproducir la conversión, debe colocarse en la ubicación indicada o modificar el argumento `--entrada`.
+Opciones: `--fecha AAAA-MM-DD` (día de servicio; por defecto 2021-07-14) y `--todas` (incluye todo el SITP, no solo troncales). Por seguridad, el script no escribe sobre `Datos/`.
 
-El conversor genera:
+### Reglas de la conversión
 
-- `estaciones.csv`
-- `rutas.csv`
-- `horarios.csv`
+1. **Solo rutas troncales** (`route_desc = TRONCAL`). Alimentadores, zonales y demás servicios del SITP quedan fuera.
+2. **Un solo día de servicio**: el miércoles 14/07/2021, según `calendar.txt` y `calendar_dates.txt`. Así "buses al día" (R6) cuenta un día real.
+3. **Nombre de estación**: en MAYÚSCULAS, sin tildes ni símbolos (`º`) y sin el vagón o la plataforma. Por ejemplo, `Calle 19 B - 4 ó 6` queda como `CALLE 19`, y `Portal Eldorado T-6B` queda como `PORTAL ELDORADO`.
+4. Si un viaje pasa dos veces por la misma estación, se conserva **la primera**, porque una ruta no repite estaciones.
+5. **Cada patrón distinto de estaciones** de una ruta comercial es una ruta del CSV **en un solo sentido**. Si la ruta tiene una sola variante, conserva su nombre (`D51`); si tiene varias, se numeran (`B10-1`, `B10-2`).
+   - Se descartan los patrones con **menos de 4 viajes al día**.
+   - Un patrón que es solo **un pedazo de otro más largo** (una media vuelta, por ejemplo la K43 que termina en CAD) no es una ruta propia: sus horarios se suman a la variante que lo contiene.
+   - Las variantes se numeran **de la que tiene más viajes a la que tiene menos**.
+6. **Horas mayores a 24:00**: `25:10` se convierte en `01:10` (módulo 24), porque el usuario pregunta con la hora del reloj y el formato pedido es `HH:MM`. Se pierde la indicación de que el viaje es del día siguiente.
 
-### Limitaciones
+### Comparación con `Datos/`
 
-La conversión de horarios utiliza un formato de reloj de 24 horas. En consecuencia, los horarios GTFS posteriores a las 24:00 pierden la indicación de que corresponden al día siguiente.
-
-El sistema no calcula tiempos reales de espera ni garantiza la operación actual de los servicios.
+Con el GTFS del 14/07/2021, el script genera las **mismas 147 estaciones** y **las 181 rutas con el mismo recorrido** (177 también con el mismo nombre; en 5-1/5-2 y G30-1/G30-2 el número se intercambia porque tienen casi la misma cantidad de viajes). El **97,8 %** de las filas de horarios coinciden exactamente.
 
 ## Uso académico
 
 Proyecto desarrollado con fines educativos para aplicar conceptos de estructuras de datos, algoritmos de búsqueda, ordenamiento y procesamiento de información.
-
----
-
-## Conversión de datos GTFS
-
-RutaViva incluye un conversor desarrollado en Python que transforma
-datos GTFS en los tres CSV utilizados por el motor:
-
-- estaciones.csv
-- rutas.csv
-- horarios.csv
-
-### Requisitos
-
-- Python instalado.
-- Archivo GTFS válido en formato ZIP o carpeta.
-- Espacio suficiente para generar los archivos convertidos.
-
-### Ejecutar el conversor
-
-Desde la carpeta principal del proyecto:
-
-python Conversion/convertir.py --entrada "ruta/al/archivo_gtfs.zip" --salida "Datos_corregidos"
-
-Sustituir "ruta/al/archivo_gtfs.zip" por la ubicación real del GTFS.
-
-### Archivos generados
-
-El programa genera:
-
-Datos_corregidos/estaciones.csv
-Datos_corregidos/rutas.csv
-Datos_corregidos/horarios.csv
-
-### Tratamiento de horarios
-
-GTFS permite horas posteriores a medianoche, como 25:10:00.
-
-Para adaptarlas al formato académico HH:MM, el conversor
-aplica módulo 24.
-
-Ejemplo:
-
-25:10:00 -> 01:10
-
-Esta transformación pierde la información de que el evento
-corresponde al día siguiente.
-
-### Consideraciones
-
-El archivo Datos_corregidos/horarios.csv puede superar los
-375 MB dependiendo del GTFS utilizado.
-
-Por esta razón, no se incluye directamente en el repositorio GitHub.
-
-Para utilizar los datos convertidos, primero debe ejecutarse
-el conversor con un archivo GTFS válido.
-
-Los archivos de Datos/ corresponden al conjunto académico
-utilizado durante el desarrollo y se conservan por separado.
-
-La estructura y los identificadores de las rutas pueden variar
-según la versión del GTFS utilizada.

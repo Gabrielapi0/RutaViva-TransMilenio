@@ -28,3 +28,4 @@ GTFS/
 *.zip
 # Horarios GTFS convertidos (archivo de 375 MB)
 Datos_corregidos/horarios.csv
+Datos_corregidos/
